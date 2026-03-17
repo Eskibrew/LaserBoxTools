@@ -34,7 +34,7 @@ All features work on selected faces and edges of your Part or PartDesign bodies,
 ### Option 2: Manual installation
 
 1. Clone or download this repository
-2. Copy the entire `LaserBoxTools` folder into your FreeCAD Mod directory:
+2. Rename "LaserBoxTools_Main" to "LaserBoxTools" and then copy the entire `LaserBoxTools` folder into your FreeCAD Mod directory:
    - **Linux**: `~/.local/share/FreeCAD/Mod/` (or `~/.local/share/FreeCAD/v1-2/Mod/` for FreeCAD 1.2)
    - **Windows**: `%APPDATA%\FreeCAD\Mod\`
    - **macOS**: `~/Library/Application Support/FreeCAD/Mod/`
