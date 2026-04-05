@@ -310,8 +310,8 @@
   <tabstop>TabCount</tabstop>
   <tabstop>TabWidth</tabstop>
   <tabstop>TabDepth</tabstop>
-  <tabstop>GapWidth</tabstop>
   <tabstop>TabTaper</tabstop>
+  <tabstop>GapWidth</tabstop>
   <tabstop>TabMode</tabstop>
   <tabstop>SwapEnds</tabstop>
   <tabstop>Margin1</tabstop>
@@ -322,6 +322,7 @@
   <tabstop>SwapHookDirection</tabstop>
   <tabstop>treeWidgetTabFaces</tabstop>
   <tabstop>pbUpdateTabFaces</tabstop>
+  <tabstop>pbEditTabFaces</tabstop>
  </tabstops>
  <resources/>
  <connections/>

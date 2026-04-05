@@ -222,7 +222,7 @@ class LBTabsViewProviderTree:
         taskd.form.SwapHookDirection.setChecked(self.Object.SwapHookDirection)
         self.Object.AutoUpdate = True
         taskd.update()
-        taskd.updateTabModeSwapEndsState()
+        # taskd.updateTabModeSwapEndsState()
         FreeCADGui.Control.showDialog(taskd)
         return True
 
@@ -314,7 +314,7 @@ class LBTabsViewProviderFlat:
         taskd.form.SwapHookDirection.setChecked(self.Object.SwapHookDirection)
         self.Object.AutoUpdate = True
         taskd.update()
-        taskd.updateTabModeSwapEndsState()
+        # taskd.updateTabModeSwapEndsState()
         FreeCADGui.Control.showDialog(taskd)
         return True
 
@@ -362,16 +362,16 @@ class LBTabsTaskPanel:
         self.form.TabHookRadius.valueChanged.connect(self.onTabHookRadiusChanged)
         self.form.SwapHookDirection.stateChanged.connect(self.onSwapHookDirectionChanged)
         self.update()
-        self.updateTabModeSwapEndsState()
+        # self.updateTabModeSwapEndsState()
 
-    def updateTabModeSwapEndsState(self):
-        """Disable TabMode and SwapEnds when TabCount is 0."""
-        enabled = self.form.TabCount.value() != 0
-        self.form.TabMode.setEnabled(enabled)
-        self.form.SwapEnds.setEnabled(enabled and self.form.TabMode.currentText() == "From One End")
+    # def updateTabModeSwapEndsState(self):
+    #     """Disable TabMode and SwapEnds when TabCount is 0."""
+    #     enabled = self.form.TabCount.value() != 0
+    #     self.form.TabMode.setEnabled(enabled)
+    #     self.form.SwapEnds.setEnabled(enabled and self.form.TabMode.currentText() == "From One End")
 
     def onTabCountChanged(self, val):
-        self.updateTabModeSwapEndsState()
+        # self.updateTabModeSwapEndsState()
         if self.obj:
             if self.obj.TabMode == "From Both Ends":
                 if val % 2 != 0:
@@ -396,7 +396,7 @@ class LBTabsTaskPanel:
     def onTabModeChanged(self, val):
         if self.obj:
             self.obj.TabMode = val
-        self.updateTabModeSwapEndsState()
+        # self.updateTabModeSwapEndsState()
 
         if self.obj and val == "From Both Ends":
             if self.obj.TabCount % 2 != 0:

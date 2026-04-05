@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>315</width>
-    <height>597</height>
+    <height>598</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -262,8 +262,16 @@
   <tabstop>SlotLength</tabstop>
   <tabstop>SlotDepth</tabstop>
   <tabstop>GapWidth</tabstop>
-  <tabstop>treeWidgetSlotFaces</tabstop>
+  <tabstop>SlotMode</tabstop>
+  <tabstop>SwapEnds</tabstop>
+  <tabstop>Margin1</tabstop>
+  <tabstop>Margin2</tabstop>
+  <tabstop>OffsetFromFace</tabstop>
+  <tabstop>SlotHookLength</tabstop>
+  <tabstop>SwapHookDirection</tabstop>
+  <tabstop>pbEditSlotFaces</tabstop>
   <tabstop>pbUpdateSlotFaces</tabstop>
+  <tabstop>treeWidgetSlotFaces</tabstop>
  </tabstops>
  <resources/>
  <connections/>

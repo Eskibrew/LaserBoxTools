@@ -141,8 +141,21 @@ class LBSlotsViewProviderTree:
 
     def updateData(self, fp, prop):
         '''If a property of the handled feature has changed we have the chance to handle this here'''
-        # Do NOT call fp.Document.recompute() here - it causes recursive recompute when
-        # dependents (e.g. Slots on Tabs) exist. FreeCAD's dependency graph handles recompute.
+        if fp.AutoUpdate:
+            if  prop == "SlotDepth" or \
+                prop == "SlotLength" or \
+                prop == "GapWidth" or \
+                prop == "SlotCount" or \
+                prop == "Refine" or \
+                prop == "SlotMode" or \
+                prop == "Margin1" or \
+                prop == "Margin2" or \
+                prop == "OffsetFromFace" or \
+                prop == "baseObject" or \
+                prop == "SwapEnds" or \
+                prop == "SlotHookLength" or \
+                prop == "SwapHookDirection":
+                fp.Document.recompute()  # Full document recompute so dependents (e.g. Tabs) update
         return
 
     def getDisplayModes(self, vobj):
@@ -282,7 +295,7 @@ class LBSlotsViewProviderFlat:
         self.Object.AutoUpdate = True
         taskd.update()
         taskd.updateSlotDepthLabel()
-        taskd.updateSlotModeSwapEndsState()
+        # taskd.updateSlotModeSwapEndsState()
         FreeCADGui.Control.showDialog(taskd)
         return True
 
@@ -327,16 +340,16 @@ class LBSlotsTaskPanel:
         self.form.OffsetFromFace.valueChanged.connect(self.onOffsetFromFaceChanged)
         self.update()
         self.updateSlotDepthLabel()
-        self.updateSlotModeSwapEndsState()
+        # self.updateSlotModeSwapEndsState()
 
-    def updateSlotModeSwapEndsState(self):
-        """Disable SlotMode and SwapEnds when SlotCount is 0."""
-        enabled = self.form.SlotCount.value() != 0
-        self.form.SlotMode.setEnabled(enabled)
-        self.form.SwapEnds.setEnabled(enabled and self.form.SlotMode.currentText() == "From One End")
+    # def updateSlotModeSwapEndsState(self):
+    #     """Disable SlotMode and SwapEnds when SlotCount is 0."""
+    #     enabled = self.form.SlotCount.value() != 0
+    #     self.form.SlotMode.setEnabled(enabled)
+    #     self.form.SwapEnds.setEnabled(enabled and self.form.SlotMode.currentText() == "From One End")
 
     def onSlotCountChanged(self, val):
-        self.updateSlotModeSwapEndsState()
+        # self.updateSlotModeSwapEndsState()
         if self.obj.SlotMode == "From Both Ends":
             if val % 2 != 0:
                 #it needs to be an even number in this mode
@@ -360,7 +373,7 @@ class LBSlotsTaskPanel:
     def onSlotModeChanged(self, val):
         if self.obj:
             self.obj.SlotMode = val
-        self.updateSlotModeSwapEndsState()
+        # self.updateSlotModeSwapEndsState()
 
         if self.obj and val == "From Both Ends":
             if self.obj.SlotCount % 2 != 0:

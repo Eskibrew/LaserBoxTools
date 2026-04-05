@@ -65,7 +65,7 @@ class LBGenerateLivingHinge:
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Element Width")
         obj.addProperty("App::PropertyLength","ElementWidth","Parameters",_tip_).ElementWidth = 0.1
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Element Depth")
-        obj.addProperty("App::PropertyLength","ElementDepth","Parameters",_tip_).ElementDepth = 3.0
+        obj.addProperty("App::PropertyLength","ElementDepth","Parameters",_tip_).ElementDepth = 0.0
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Element Spacing")
         obj.addProperty("App::PropertyLength","ElementSpacing","Parameters",_tip_).ElementSpacing = 1.0
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Base Object")
@@ -294,7 +294,7 @@ class LBLivingHingeTaskPanel:
         # set some default values
         self.form.ElementCount.setValue(4)
         self.form.ElementWidth.setValue(0.1)
-        self.form.ElementDepth.setValue(3.0)
+        self.form.ElementDepth.setValue(0.0)
         self.form.ElementSpacing.setValue(1.0)
         self.form.ElementMode.setCurrentIndex(0)
         self.form.ElementType.setCurrentIndex(0)
