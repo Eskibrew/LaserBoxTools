@@ -30,7 +30,7 @@ laser_boxes_path = os.path.dirname(laser_boxes_locator.__file__)
 lb_icons_path = os.path.join(laser_boxes_path, 'Resources', 'icons')
 main_laser_boxes_icon = os.path.join(lb_icons_path, 'LBLogo.svg')
 
-class LaserBoxesWorkbench (Workbench):
+class LaserBoxToolsWorkbench (Workbench):
     global main_laser_boxes_icon
     global lb_icons_path
 
@@ -79,8 +79,8 @@ class LaserBoxesWorkbench (Workbench):
         from src import lasermakebox, lasertabs, laserslots, laserlivinghinge
 
         self.list = ["LBBasicBox", "LBTabs", "LBSlots", "LBLivingHinge"]
-        self.appendToolbar("Laser Boxes", self.list)
-        self.appendMenu("Laser Boxes", self.list)
+        self.appendToolbar("Laser Box Tools", self.list)
+        self.appendMenu("Laser Box Tools", self.list)
         FreeCADGui.addIconPath(lb_icons_path)
  
     def Activated(self):
@@ -99,4 +99,4 @@ class LaserBoxesWorkbench (Workbench):
         "this function is mandatory if this is a full python workbench"
         return "Gui::PythonWorkbench"
  
-Gui.addWorkbench(LaserBoxesWorkbench())
+Gui.addWorkbench(LaserBoxToolsWorkbench())

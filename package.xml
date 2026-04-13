@@ -13,7 +13,10 @@
   <url type="documentation">https://github.com/Eskibrew/LaserBoxTools/blob/main/docs</url>
   <icon>small_icon.svg</icon>
   <content>
-    <workbench>LaserBoxesWorkbench</workbench>
+    <workbench>
+      <classname>LaserBoxToolsWorkbench</classname>
+      <subdirectory>./</subdirectory>
+    </workbench>
   </content>
   <dependencies>
     <freecad>1.0.0</freecad>
