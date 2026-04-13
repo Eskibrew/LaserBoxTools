@@ -2,7 +2,7 @@
 
 A FreeCAD workbench for designing laser-cut boxes and enclosures. Create parametric tabs, slots, and living hinges on your 3D models for easy laser cutting and assembly.
 
-![Laser Boxes Workbench](Resources/icons/LBLogo.svg)
+![Laser Box Tools Workbench](Resources/icons/LBLogo.svg)
 
 **Video tutorial:** [How to use basic features](https://youtu.be/j17BoXwl58k)
 
@@ -26,7 +26,7 @@ All features work on selected faces and edges of your Part or PartDesign bodies,
 
 1. Open FreeCAD
 2. Go to **Tools → Addon Manager**
-3. Search for "LaserBoxTools" or "Laser Boxes"
+3. Search for "LaserBoxTools"
 4. Click **Install**
 
 > If this workbench is not yet in the Addon Manager repository, use manual installation below.
@@ -40,7 +40,7 @@ From Github directly:
    Branch: main
 3. Under "Tools" "Addon Manager" you should now be able to find and install LaserBoxTools.
 4. Restart FreeCAD
-5. Select the **Laser Boxes** workbench from the workbench dropdown
+5. Select the **Laser Box Tools** workbench from the workbench dropdown
 
 From Github download:
 1. Clone or download the Github repository
@@ -50,12 +50,12 @@ From Github download:
    - **macOS**: `~/Library/Application Support/FreeCAD/Mod/`
 3. Note, if downloading the ZIP file, you'll need to rename the extracted directory "LaserBoxTools"
 3. Restart FreeCAD
-4. Select the **Laser Boxes** workbench from the workbench dropdown
+4. Select the **Laser Box Tools** workbench from the workbench dropdown
 
 ## Usage
 
 1. Create a new file or open a Part or PartDesign model
-2. Switch to the **Laser Boxes** workbench
+2. Switch to the **Laser Box Tools** workbench
 3. Select a face or edge on your model
 4. Create a new box using:
    - **LBBasicBox** — Create a new box or;
@@ -72,7 +72,7 @@ Adjust parameters in the property panel or task panel. Enable **Auto Update** to
 LaserBoxTools/
 ├── Init.py              # Module initialization
 ├── InitGui.py           # Workbench registration
-├── laser_boxes_locator.py
+├── laser_box_tools_locator.py
 ├── src/
 │   ├── lasermakebox.py  # Basic box creation
 │   ├── lasertabs.py     # Tab generation

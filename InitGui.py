@@ -24,19 +24,19 @@ from PySide import QtCore
 import FreeCAD as App
 #from FreeCAD import Gui
 import os
-import laser_boxes_locator
+import laser_box_tools_locator
 
-laser_boxes_path = os.path.dirname(laser_boxes_locator.__file__)
-lb_icons_path = os.path.join(laser_boxes_path, 'Resources', 'icons')
-main_laser_boxes_icon = os.path.join(lb_icons_path, 'LBLogo.svg')
+laser_box_tools_path = os.path.dirname(laser_box_tools_locator.__file__)
+lb_icons_path = os.path.join(laser_box_tools_path, 'Resources', 'icons')
+main_laser_box_tools_icon = os.path.join(lb_icons_path, 'LBLogo.svg')
 
 class LaserBoxToolsWorkbench (Workbench):
-    global main_laser_boxes_icon
+    global main_laser_box_tools_icon
     global lb_icons_path
 
-    MenuText = 'Laser Boxes ' + 'V0.2.0'
+    MenuText = 'Laser Box Tools ' + 'V0.2.0'
     ToolTip = 'Tools for making laser cut boxes'
-    Icon = main_laser_boxes_icon
+    Icon = main_laser_box_tools_icon
     
 #     """
 # /* XPM */
@@ -93,7 +93,7 @@ class LaserBoxToolsWorkbench (Workbench):
  
     def ContextMenu(self, recipient):
         "This is executed whenever the user right-clicks on screen"
-        self.appendContextMenu("Laser Boxes", self.list) # add commands to the context menu
+        self.appendContextMenu("Laser Box Tools", self.list) # add commands to the context menu
  
     def GetClassName(self):
         "this function is mandatory if this is a full python workbench"

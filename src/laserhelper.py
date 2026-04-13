@@ -84,7 +84,7 @@ def lbActivateWorkbench():
     """Activate the LaserBoxTools workbench when editing tabs, slots or living hinge features.
     Uses QTimer to defer activation so the workbench combo box updates correctly."""
     def _do_activate():
-        for name in ("LaserBoxToolsWorkbench", "LaserBoxesWorkbench"):
+        for name in ("LaserBoxToolsWorkbench"):
             try:
                 FreeCADGui.activateWorkbench(name)
                 return
