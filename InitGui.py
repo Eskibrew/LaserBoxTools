@@ -34,7 +34,7 @@ class LaserBoxToolsWorkbench (Workbench):
     global main_laser_box_tools_icon
     global lb_icons_path
 
-    MenuText = 'Laser Box Tools ' + 'V0.2.0'
+    MenuText = 'Laser Box Tools'
     ToolTip = 'Tools for making laser cut boxes'
     Icon = main_laser_box_tools_icon
     
