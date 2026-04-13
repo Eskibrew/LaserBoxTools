@@ -7,14 +7,15 @@
   <maintainer>Eskibrew</maintainer>
   <author>Eskibrew</author>
   <license file="LICENSE">LGPL-2.1-or-later</license>
-  <url type="repository" branch="master">https://github.com/Eskibrew/LaserBoxTools</url>
+  <url type="repository" branch="main">https://github.com/Eskibrew/LaserBoxTools</url>
+  <url type="bugtracker">https://github.com/Eskibrew/LaserBoxTools/issues</url>
   <url type="readme">https://github.com/Eskibrew/LaserBoxTools/blob/main/README.md</url>
   <url type="documentation">https://github.com/Eskibrew/LaserBoxTools/blob/main/docs</url>
   <icon>small_icon.svg</icon>
   <content>
-    <workbench>
-      <classname>LaserBoxesWorkbench</classname>
-      <subdirectory>./</subdirectory>
-    </workbench>
+    <workbench>LaserBoxesWorkbench</workbench>
   </content>
+  <dependencies>
+    <freecad>1.0.0</freecad>
+  </dependencies>
 </package>
