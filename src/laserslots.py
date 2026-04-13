@@ -39,14 +39,6 @@ import sys
 freecadpython = sys.executable.replace('freecad', 'python')
 App.Console.PrintMessage('Using ' + freecadpython +'\n')
 
-#import debugpy
-#debugpy.configure(python=freecadpython)
-#
-#if not debugpy.is_client_connected():
-#    debugpy.listen(5678)
-#        
-#print("waiting for debugger attach")
-#debugpy.wait_for_client()
 
 __dir__ = os.path.dirname(__file__)
 icons = os.path.join(__dir__, '../Resources/icons')
@@ -63,10 +55,10 @@ def LBEnsureSlotHookProperties(obj):
 
 
 class LBGenerateSlots:
-    def __init__(self, obj):
+    def __init__(self, obj, base_link=None):
         '''"Generate Slots" '''
         obj.Proxy = self
-        selobj = Gui.Selection.getSelectionEx()[0]
+
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Auto Update")
         obj.addProperty("App::PropertyBool","AutoUpdate","ParametersExt",_tip_).AutoUpdate = False
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Slot Count")
@@ -78,7 +70,15 @@ class LBGenerateSlots:
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Gap Width")
         obj.addProperty("App::PropertyLength","GapWidth","Parameters",_tip_).GapWidth = 10.0
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Base Object")
-        obj.addProperty("App::PropertyLinkSub", "baseObject", "Parameters",_tip_).baseObject = (selobj.Object, selobj.SubElementNames)
+        obj.addProperty("App::PropertyLinkSub", "baseObject", "Parameters",_tip_)
+
+        if base_link is not None:
+            bo, sub = base_link
+            obj.baseObject = (bo, tuple(sub))
+        else:
+            selobj = Gui.Selection.getSelectionEx()[0]
+            obj.baseObject = (selobj.Object, selobj.SubElementNames)
+            
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Use Refine")
         obj.addProperty("App::PropertyBool","Refine","ParametersExt",_tip_).Refine = True
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Where to start slots")
@@ -113,7 +113,55 @@ class LBGenerateSlots:
                         margin1 = fp.Margin1.Value, margin2 = fp.Margin2.Value, offsetFromFace = fp.OffsetFromFace.Value,
                         slotHookLength = fp.SlotHookLength.Value, swapHookDirection = fp.SwapHookDirection,
                         subtraction = False, refine = fp.Refine, selFaceNames = face, selObject = Main_Object)
+        fp.baseObject[0].ViewObject.Visibility = False
         fp.Shape = s
+
+
+def LBCreateSlotsFeature(doc, link_obj, face_names, slot_count, slot_width, slot_depth, gap_width, slot_mode, margin1, margin2, offset_from_face, refine=True, plate_for_name=None):
+    """Create a parametric Slots feature linked to link_obj (no GUI selection).
+
+    link_obj: object for baseObject (PartDesign: Body.Tip — not the Body). plate_for_name: optional
+    for unique Name/Label when link_obj is Tip.
+
+    PartDesign::FeaturePython + flat view when link_obj belongs to a PartDesign::Body; otherwise
+    Part::FeaturePython + tree view (same split as LBSlots command).
+
+    Returns the new Slots object, or None if slots were skipped (no faces or zero depth).
+    """
+    if slot_depth <= 0 or not face_names:
+        return None
+
+    uniq = plate_for_name.Name if plate_for_name is not None else link_obj.Name
+    name = doc.getUniqueObjectName("Slots_" + uniq)
+    pd_body = laserhelper.lbPartDesignBodyContaining(link_obj)
+    if pd_body is not None:
+        a = doc.addObject("PartDesign::FeaturePython", name)
+    else:
+        a = doc.addObject("Part::FeaturePython", name)
+    cls = LBGenerateSlots(a, base_link=(link_obj, tuple(face_names)))
+    if pd_body is not None:
+        LBSlotsViewProviderFlat(a.ViewObject)
+    else:
+        LBSlotsViewProviderTree(a.ViewObject)
+    a.SlotCount = slot_count
+    a.SlotLength = float(slot_width)
+    a.SlotDepth = float(slot_depth)
+    a.GapWidth = float(gap_width)
+    a.SlotMode = slot_mode
+    a.Margin1 = float(margin1)
+    a.Margin2 = float(margin2)
+    a.SwapEnds = False
+    a.Refine = refine
+    a.SlotHookLength = 0.0
+    a.SwapHookDirection = False
+    a.OffsetFromFace = float(offset_from_face)
+    label_src = plate_for_name if plate_for_name is not None else link_obj
+    a.Label = "Slots ({})".format(label_src.Label)
+    if pd_body is not None:
+        pd_body.addObject(a)
+    cls.execute(a)
+    a.AutoUpdate = True
+    return a
 
 
 class LBSlotsViewProviderTree:

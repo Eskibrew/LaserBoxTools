@@ -8,7 +8,7 @@ A FreeCAD workbench for designing laser-cut boxes and enclosures. Create paramet
 
 ## Features
 
-- **Basic Box** — Create rectangular box pieces with configurable dimensions
+- **Basic Box** — Create rectangular box pieces with configurable dimensions and optional tabs/slots. These are a collection of separate parts or separate bodies which are grouped together to make a box.
 - **Tabs** — Add parametric finger tabs along edges for joining panels. Supports tab count, width, depth, taper, margins, and optional hook profiles
 - **Slots** — Generate slots along edges to receive tabs from other panels. Configurable slot count, length, depth, and gap width
 - **Living Hinge** — Create flexible hinge patterns (e.g. straight elements) along edges for foldable designs
@@ -33,21 +33,33 @@ All features work on selected faces and edges of your Part or PartDesign bodies,
 
 ### Option 2: Manual installation
 
-1. Clone or download this repository
+From Github directly:
+1. Open preferences and navigate to "Addon Manager" -> "Addon Manager Options"
+2. Under Custom Repositories, click + and enter:
+   Repository URL: https://github.com/Eskibrew/LaserBoxTools
+   Branch: main
+3. Under "Tools" "Addon Manager" you should now be able to find and install LaserBoxTools.
+4. Restart FreeCAD
+5. Select the **Laser Boxes** workbench from the workbench dropdown
+
+From Github download:
+1. Clone or download the Github repository
 2. Copy the entire `LaserBoxTools` folder into your FreeCAD Mod directory:
    - **Linux**: `~/.local/share/FreeCAD/Mod/` (or `~/.local/share/FreeCAD/v1-2/Mod/` for FreeCAD 1.2)
    - **Windows**: `%APPDATA%\FreeCAD\Mod\`
    - **macOS**: `~/Library/Application Support/FreeCAD/Mod/`
+3. Note, if downloading the ZIP file, you'll need to rename the extracted directory "LaserBoxTools"
 3. Restart FreeCAD
 4. Select the **Laser Boxes** workbench from the workbench dropdown
 
 ## Usage
 
-1. Create or open a Part or PartDesign model
+1. Create a new file or open a Part or PartDesign model
 2. Switch to the **Laser Boxes** workbench
 3. Select a face or edge on your model
-4. Use one of the tools:
-   - **LBBasicBox** — Create a new box piece
+4. Create a new box using:
+   - **LBBasicBox** — Create a new box or;
+5. Use one of the tools:
    - **LBTabs** — Add tabs to the selected edge
    - **LBSlots** — Add slots to the selected edge
    - **LBLivingHinge** — Add a living hinge along the selected edge
@@ -69,6 +81,9 @@ LaserBoxTools/
 │   └── laserhelper.py   # Shared utilities
 ├── dialogs/             # Qt UI files
 ├── Resources/icons/     # Tool icons
+├── README.md            # This file
+├── small_icon.svg       # Project icon
+├── package.xml          # Manifest for Addon Manager
 └── LICENSE
 ```
 

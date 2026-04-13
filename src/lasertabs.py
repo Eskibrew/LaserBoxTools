@@ -68,10 +68,13 @@ def LBEnsureTabHookProperties(obj):
 
 
 class LBGenerateTabs:
-    def __init__(self, obj):
-        '''"Generate Tabs" '''
+    def __init__(self, obj, base_link=None):
+        '''"Generate Tabs"
+
+        base_link: optional (base_document_object, sub_element_names) to skip GUI selection
+        (e.g. programmatic use from Basic Box). If None, uses the current selection.
+        '''
         obj.Proxy = self
-        selobj = Gui.Selection.getSelectionEx()[0]
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Auto Update")
         obj.addProperty("App::PropertyBool","AutoUpdate","ParametersExt",_tip_).AutoUpdate = False
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Tab Count")
@@ -83,7 +86,15 @@ class LBGenerateTabs:
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Gap Width")
         obj.addProperty("App::PropertyLength","GapWidth","Parameters",_tip_).GapWidth = 10.0
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Base Object")
-        obj.addProperty("App::PropertyLinkSub", "baseObject", "Parameters",_tip_).baseObject = (selobj.Object, selobj.SubElementNames)
+        obj.addProperty("App::PropertyLinkSub", "baseObject", "Parameters",_tip_)
+
+        if base_link is not None:
+            bo, sub = base_link
+            obj.baseObject = (bo, tuple(sub))
+        else:
+            selobj = Gui.Selection.getSelectionEx()[0]
+            obj.baseObject = (selobj.Object, selobj.SubElementNames)
+
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Use Refine")
         obj.addProperty("App::PropertyBool","Refine","ParametersExt",_tip_).Refine = True
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Where to start tabs")
@@ -126,6 +137,55 @@ class LBGenerateTabs:
         fp.baseObject[0].ViewObject.Visibility = False
         fp.Shape = s
 
+
+def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_depth, gap_width, tab_mode, tab_taper, margin1, margin2, refine=True, plate_for_name=None):
+    """Create a parametric Tabs feature linked to link_obj (no GUI selection).
+
+    link_obj: object for baseObject / FaceN refs (PartDesign: Body.Tip, e.g. Pad — not the Body).
+    plate_for_name: optional; used for unique Name/Label when link_obj is Tip but the plate is a Body.
+
+    PartDesign::FeaturePython + flat view when link_obj lies in a PartDesign::Body; Part::FeaturePython
+    + tree view for Part workbench.
+
+    Returns the new Tabs object, or None if tabs were skipped (no faces or zero depth).
+    """
+    if tab_depth <= 0 or not face_names:
+        return None
+
+    uniq = plate_for_name.Name if plate_for_name is not None else link_obj.Name
+    name = doc.getUniqueObjectName("Tabs_" + uniq)
+    pd_body = laserhelper.lbPartDesignBodyContaining(link_obj)
+    if pd_body is not None:
+        a = doc.addObject("PartDesign::FeaturePython", name)
+    else:
+        a = doc.addObject("Part::FeaturePython", name)
+    cls = LBGenerateTabs(a, base_link=(link_obj, tuple(face_names)))
+    if pd_body is not None:
+        LBTabsViewProviderFlat(a.ViewObject)
+    else:
+        LBTabsViewProviderTree(a.ViewObject)
+    a.TabCount = tab_count
+    a.TabWidth = float(tab_width)
+    a.TabDepth = float(tab_depth)
+    a.GapWidth = float(gap_width)
+    a.TabMode = tab_mode
+    a.TabTaper = float(tab_taper)
+    a.Margin1 = float(margin1)
+    a.Margin2 = float(margin2)
+    a.SwapEnds = False
+    a.Refine = refine
+    a.TabHookDepth = 0.0
+    a.TabHookLength = 0.0
+    a.TabHookRadius = 0.0
+    a.SwapHookDirection = False
+    label_src = plate_for_name if plate_for_name is not None else link_obj
+    a.Label = "Tabs ({})".format(label_src.Label)
+    if pd_body is not None:
+        pd_body.addObject(a)
+    cls.execute(a)
+    # After execute: avoid updateData-driven doc.recompute() during property batching (can loop with dependents).
+    a.AutoUpdate = True
+    return a
 
 
 class LBTabsViewProviderTree:

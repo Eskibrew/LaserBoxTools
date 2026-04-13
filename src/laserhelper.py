@@ -109,6 +109,25 @@ def lbBelongToBody(item, body):
     return False
 
 
+def lbPartDesignBodyContaining(obj):
+    """Return the PartDesign::Body that contains obj, or None.
+
+    Used to place Tabs/Slots as PartDesign::FeaturePython inside the body (flat tree) instead of
+    Part::FeaturePython with nested claimChildren (Part-style tree).
+    """
+    if obj is None:
+        return None
+    if obj.isDerivedFrom('PartDesign::Body'):
+        return obj
+    doc = obj.Document
+    if doc is None:
+        return None
+    for o in doc.Objects:
+        if o.isDerivedFrom('PartDesign::Body') and lbBelongToBody(obj, o):
+            return o
+    return None
+
+
 def lbIsSketchObject(obj):
     return str(obj).find("<Sketcher::") == 0
 
@@ -379,6 +398,7 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                 
             p8 = p7 + depthDir * tabHookDepth
             p9 = p6 + depthDir * tabHookDepth
+
             if tabHookRadius > 0:
                 # Build wire with filleted corners at p8 and p9
                 # ensure the radius cannot consume edges
@@ -386,6 +406,8 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                 r9 = min(tabHookRadius, (p8 - p9).Length * 0.99, (p6 - p9).Length * 0.99, (((p7 - p6).Length) / 2) * 0.99)
 
                 if r8 > lbEpsilon and r9 > lbEpsilon:
+                    # Radius is large enough so we can fillet
+
                     # Fillet at p8
                     arc_start_8 = p8 + (p7 - p8).normalize() * r8
                     arc_end_8 = p8 + (p9 - p8).normalize() * r8
@@ -395,6 +417,7 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                     bisector_8 = (v1_8 + v2_8).normalize()
                     arc_center_8 = p8 + bisector_8 * (r8 / math.sin(angle_8 / 2))
                     arc_mid_8 = arc_center_8 + ((arc_start_8 - arc_center_8).normalize() + (arc_end_8 - arc_center_8).normalize()).normalize() * r8
+                    
                     # Fillet at p9
                     arc_start_9 = p9 + (p8 - p9).normalize() * r9
                     arc_end_9 = p9 + (p6 - p9).normalize() * r9
@@ -404,14 +427,17 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                     bisector_9 = (v1_9 + v2_9).normalize()
                     arc_center_9 = p9 + bisector_9 * (r9 / math.sin(angle_9 / 2))
                     arc_mid_9 = arc_center_9 + ((arc_start_9 - arc_center_9).normalize() + (arc_end_9 - arc_center_9).normalize()).normalize() * r9
+                    
                     e1 = Part.Edge(Part.LineSegment(p6, p7))
                     e2 = Part.Edge(Part.LineSegment(p7, arc_start_8))
                     e3 = Part.Edge(Part.Arc(arc_start_8, arc_mid_8, arc_end_8))
                     e4 = Part.Edge(Part.LineSegment(arc_end_8, arc_start_9))
                     e5 = Part.Edge(Part.Arc(arc_start_9, arc_mid_9, arc_end_9))
                     e6 = Part.Edge(Part.LineSegment(arc_end_9, p6))
+                    
                     tabHookFace = Part.Face(Part.Wire([e1, e2, e3, e4, e5, e6]))
                 else:
+                    # Radius too small so no fillet, just make a polygon
                     tabHookFace = Part.Face(Part.makePolygon([p6, p7, p8, p9, p6]))
             else:
                 tabHookFace = Part.makePolygon([p6, p7, p8, p9, p6])
@@ -475,6 +501,8 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                     r9 = min(tabHookRadius, (p8 - p9).Length * 0.99, (p6 - p9).Length * 0.99, (((p7 - p6).Length) / 2) * 0.99)
 
                     if r8 > lbEpsilon and r9 > lbEpsilon:
+                        # Radius is large enough so we can fillet
+                        
                         # Fillet at p8
                         arc_start_8 = p8 + (p7 - p8).normalize() * r8
                         arc_end_8 = p8 + (p9 - p8).normalize() * r8
@@ -484,6 +512,7 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                         bisector_8 = (v1_8 + v2_8).normalize()
                         arc_center_8 = p8 + bisector_8 * (r8 / math.sin(angle_8 / 2))
                         arc_mid_8 = arc_center_8 + ((arc_start_8 - arc_center_8).normalize() + (arc_end_8 - arc_center_8).normalize()).normalize() * r8
+                        
                         # Fillet at p9
                         arc_start_9 = p9 + (p8 - p9).normalize() * r9
                         arc_end_9 = p9 + (p6 - p9).normalize() * r9
@@ -493,6 +522,7 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                         bisector_9 = (v1_9 + v2_9).normalize()
                         arc_center_9 = p9 + bisector_9 * (r9 / math.sin(angle_9 / 2))
                         arc_mid_9 = arc_center_9 + ((arc_start_9 - arc_center_9).normalize() + (arc_end_9 - arc_center_9).normalize()).normalize() * r9
+                        
                         e1 = Part.Edge(Part.LineSegment(p6, p7))
                         e2 = Part.Edge(Part.LineSegment(p7, arc_start_8))
                         e3 = Part.Edge(Part.Arc(arc_start_8, arc_mid_8, arc_end_8))
@@ -501,6 +531,7 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                         e6 = Part.Edge(Part.LineSegment(arc_end_9, p6))
                         tabHookFace = Part.Face(Part.Wire([e1, e2, e3, e4, e5, e6]))
                     else:
+                        # Radius too small so no fillet, just make a polygon
                         tabHookFace = Part.Face(Part.makePolygon([p6, p7, p8, p9, p6]))
                 else:
                     tabHookFace = Part.makePolygon([p6, p7, p8, p9, p6])
