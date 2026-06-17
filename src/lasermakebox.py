@@ -264,6 +264,27 @@ def laser_face_names_for_tab_slot_faces_filtered_by_axes(shape, thickness, world
     return names
 
 
+def laser_recompute_partdesign_body_for_tip(doc, body):
+    """Ensure the PartDesign body Tip has a valid shape for face picking.
+
+    Uses a **scoped** recompute (this body only) when the FreeCAD version supports it. A full
+    ``doc.recompute()`` recomputes every object in the document; during Basic Box with tabs/slots,
+    that was called once per panel and dominated runtime as the model grew.
+    """
+    if doc is None or body is None:
+        return
+
+    r = getattr(doc, "recompute", None)
+
+    if r is None:
+        return
+
+    try:
+        r([body])
+    except TypeError:
+        r()
+
+
 def laser_link_target_and_shape_for_face_pick(part_obj):
     """Resolve link target and Shape for Face1.. enumeration and Tabs/Slots baseObject.
 
@@ -280,7 +301,7 @@ def laser_link_target_and_shape_for_face_pick(part_obj):
         doc = part_obj.Document
 
         if doc is not None:
-            doc.recompute()
+            laser_recompute_partdesign_body_for_tip(doc, part_obj)
 
         tip = getattr(part_obj, 'Tip', None)
 
