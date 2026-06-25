@@ -241,19 +241,8 @@ class LBSlotsViewProviderTree:
         taskd = LBSlotsTaskPanel(True)
         taskd.obj = vobj.Object
         self.Object.AutoUpdate = False
-        taskd.form.SlotCount.setValue(self.Object.SlotCount)
-        taskd.form.SlotLength.setValue(self.Object.SlotLength)
-        taskd.form.SlotDepth.setValue(self.Object.SlotDepth)
-        taskd.form.GapWidth.setValue(self.Object.GapWidth)
-        taskd.form.SlotMode.setCurrentText(self.Object.SlotMode)
-        taskd.form.SwapEnds.setChecked(self.Object.SwapEnds)
-        taskd.form.SlotHookLength.setValue(self.Object.SlotHookLength)
-        taskd.form.SwapHookDirection.setChecked(self.Object.SwapHookDirection)
-        taskd.form.Margin1.setValue(self.Object.Margin1)
-        taskd.form.Margin2.setValue(self.Object.Margin2)
-        taskd.form.OffsetFromFace.setValue(self.Object.OffsetFromFace)
-        self.Object.AutoUpdate = True
         taskd.update()
+        self.Object.AutoUpdate = True
         taskd.updateSlotDepthLabel()
         FreeCADGui.Control.showDialog(taskd)
         return True
@@ -329,21 +318,9 @@ class LBSlotsViewProviderFlat:
         taskd = LBSlotsTaskPanel(True)
         taskd.obj = vobj.Object
         self.Object.AutoUpdate = False
-        taskd.form.SlotCount.setValue(self.Object.SlotCount)
-        taskd.form.SlotLength.setValue(self.Object.SlotLength)
-        taskd.form.SlotDepth.setValue(self.Object.SlotDepth)
-        taskd.form.GapWidth.setValue(self.Object.GapWidth)
-        taskd.form.SlotMode.setCurrentText(self.Object.SlotMode)
-        taskd.form.SwapEnds.setChecked(self.Object.SwapEnds)
-        taskd.form.SlotHookLength.setValue(self.Object.SlotHookLength)
-        taskd.form.SwapHookDirection.setChecked(self.Object.SwapHookDirection)
-        taskd.form.Margin1.setValue(self.Object.Margin1)
-        taskd.form.Margin2.setValue(self.Object.Margin2)
-        taskd.form.OffsetFromFace.setValue(self.Object.OffsetFromFace)
-        self.Object.AutoUpdate = True
         taskd.update()
+        self.Object.AutoUpdate = True
         taskd.updateSlotDepthLabel()
-        # taskd.updateSlotModeSwapEndsState()
         FreeCADGui.Control.showDialog(taskd)
         return True
 
@@ -359,36 +336,38 @@ class LBSlotsTaskPanel:
     def __init__(self, editing):
         self.editing = editing
         self.obj = None
+        self._expressionBound = False
         # this will create a Qt widget from our ui file
         self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
         QtCore.QObject.connect(self.form.pbUpdateSlotFaces, QtCore.SIGNAL("clicked()"), self.updateSlotFaces)
         QtCore.QObject.connect(self.form.pbEditSlotFaces, QtCore.SIGNAL("clicked()"), self.editSlotFaces)
-        # set some default values
-        self.form.SlotCount.setValue(0)
-        self.form.SlotLength.setValue(10.0)
-        self.form.SlotDepth.setValue(3.0)
-        self.form.GapWidth.setValue(10.0)
         self.form.SlotMode.setCurrentIndex(0)
         self.form.SwapEnds.setChecked(False)
-        self.form.SlotHookLength.setValue(0.0)
         self.form.SwapHookDirection.setChecked(False)
-        self.form.Margin1.setValue(0.0)
-        self.form.Margin2.setValue(0.0)
-        self.form.OffsetFromFace.setValue(0.0)
         self.form.SlotCount.valueChanged.connect(self.onSlotCountChanged)
-        self.form.SlotLength.valueChanged.connect(self.onSlotLengthChanged)
-        self.form.SlotDepth.valueChanged.connect(self.onSlotDepthChanged)
-        self.form.GapWidth.valueChanged.connect(self.onGapWidthChanged)
         self.form.SlotMode.currentTextChanged.connect(self.onSlotModeChanged)
         self.form.SwapEnds.stateChanged.connect(self.onSwapEndsChanged)
-        self.form.SlotHookLength.valueChanged.connect(self.onSlotHookLengthChanged)
         self.form.SwapHookDirection.stateChanged.connect(self.onSwapHookDirectionChanged)
-        self.form.Margin1.valueChanged.connect(self.onMargin1Changed)
-        self.form.Margin2.valueChanged.connect(self.onMargin2Changed)
         self.form.OffsetFromFace.valueChanged.connect(self.onOffsetFromFaceChanged)
         self.update()
         self.updateSlotDepthLabel()
-        # self.updateSlotModeSwapEndsState()
+
+    def bindExpressions(self):
+        if self._expressionBound or not self.obj:
+            return
+        obj = self.obj
+        laserhelper.lbBindIntSpinBox(self.form.SlotCount, obj, "SlotCount")
+        laserhelper.lbBindQuantitySpinBox(self.form.SlotLength, obj, "SlotLength")
+        laserhelper.lbBindQuantitySpinBox(self.form.SlotDepth, obj, "SlotDepth")
+        laserhelper.lbBindQuantitySpinBox(self.form.GapWidth, obj, "GapWidth")
+        laserhelper.lbBindQuantitySpinBox(self.form.Margin1, obj, "Margin1")
+        laserhelper.lbBindQuantitySpinBox(self.form.Margin2, obj, "Margin2")
+        laserhelper.lbBindQuantitySpinBox(self.form.OffsetFromFace, obj, "OffsetFromFace", self.updateSlotDepthLabel)
+        laserhelper.lbBindQuantitySpinBox(self.form.SlotHookLength, obj, "SlotHookLength")
+        self.form.SlotMode.setCurrentText(obj.SlotMode)
+        self.form.SwapEnds.setChecked(obj.SwapEnds)
+        self.form.SwapHookDirection.setChecked(obj.SwapHookDirection)
+        self._expressionBound = True
 
     # def updateSlotModeSwapEndsState(self):
     #     """Disable SlotMode and SwapEnds when SlotCount is 0."""
@@ -397,63 +376,41 @@ class LBSlotsTaskPanel:
     #     self.form.SwapEnds.setEnabled(enabled and self.form.SlotMode.currentText() == "From One End")
 
     def onSlotCountChanged(self, val):
-        # self.updateSlotModeSwapEndsState()
-        if self.obj.SlotMode == "From Both Ends":
+        if self.obj and self.obj.SlotMode == "From Both Ends":
             if val % 2 != 0:
-                #it needs to be an even number in this mode
                 if self.obj.SlotCount > val:
                     val = val - 1
                 else:
                     val = val + 1
-
-                self.form.SlotCount.setValue(val)
-        self.obj.SlotCount = val
-
-    def onSlotLengthChanged(self, val):
-        self.obj.SlotLength = val
-
-    def onSlotDepthChanged(self, val):
-        self.obj.SlotDepth = val
-
-    def onGapWidthChanged(self, val):
-        self.obj.GapWidth = val
+                self.form.SlotCount.setProperty("value", val)
 
     def onSlotModeChanged(self, val):
         if self.obj:
             self.obj.SlotMode = val
-        # self.updateSlotModeSwapEndsState()
 
         if self.obj and val == "From Both Ends":
             if self.obj.SlotCount % 2 != 0:
-                self.form.SlotCount.setValue(self.obj.SlotCount + 1)
+                self.form.SlotCount.setProperty("value", self.obj.SlotCount + 1)
 
     def onSwapEndsChanged(self, val):
         self.obj.SwapEnds = val
 
-    def onSlotHookLengthChanged(self, val):
-        self.obj.SlotHookLength = val
-
     def onSwapHookDirectionChanged(self, val):
         self.obj.SwapHookDirection = val
 
-    def onMargin1Changed(self, val):
-        self.obj.Margin1 = val
-
-    def onMargin2Changed(self, val):
-        self.obj.Margin2 = val
-
     def onOffsetFromFaceChanged(self, val):
-        self.obj.OffsetFromFace = val
         self.updateSlotDepthLabel()
 
     def updateSlotDepthLabel(self):
         """Update Slot Depth label based on OffsetFromFace value"""
-        offset = self.form.OffsetFromFace.value() if self.form else 0.0
+        offset = self.obj.OffsetFromFace.Value if self.obj else 0.0
         label = self.form.label_3 if self.form else None
         if label:
             label.setText("Slot Width" if offset != 0.0 else "Slot Depth")
 
     def update(self):
+        if self.obj:
+            self.bindExpressions()
         'fills the treeWidgetSlotFaces'
         self.form.treeWidgetSlotFaces.clear()
         if self.obj:

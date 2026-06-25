@@ -267,22 +267,8 @@ class LBTabsViewProviderTree:
         taskd = LBTabsTaskPanel(True)
         taskd.obj = vobj.Object
         self.Object.AutoUpdate = False
-        taskd.form.TabCount.setValue(self.Object.TabCount)
-        taskd.form.TabWidth.setValue(self.Object.TabWidth)
-        taskd.form.TabDepth.setValue(self.Object.TabDepth)
-        taskd.form.GapWidth.setValue(self.Object.GapWidth)
-        taskd.form.TabTaper.setValue(self.Object.TabTaper)
-        taskd.form.TabMode.setCurrentText(self.Object.TabMode)
-        taskd.form.SwapEnds.setChecked(self.Object.SwapEnds)
-        taskd.form.Margin1.setValue(self.Object.Margin1)
-        taskd.form.Margin2.setValue(self.Object.Margin2)
-        taskd.form.TabHookDepth.setValue(self.Object.TabHookDepth)
-        taskd.form.TabHookLength.setValue(self.Object.TabHookLength)
-        taskd.form.TabHookRadius.setValue(self.Object.TabHookRadius)
-        taskd.form.SwapHookDirection.setChecked(self.Object.SwapHookDirection)
-        self.Object.AutoUpdate = True
         taskd.update()
-        # taskd.updateTabModeSwapEndsState()
+        self.Object.AutoUpdate = True
         FreeCADGui.Control.showDialog(taskd)
         return True
 
@@ -359,22 +345,8 @@ class LBTabsViewProviderFlat:
         taskd = LBTabsTaskPanel(True)
         taskd.obj = vobj.Object
         self.Object.AutoUpdate = False
-        taskd.form.TabCount.setValue(self.Object.TabCount)
-        taskd.form.TabWidth.setValue(self.Object.TabWidth)
-        taskd.form.TabDepth.setValue(self.Object.TabDepth)
-        taskd.form.GapWidth.setValue(self.Object.GapWidth)
-        taskd.form.TabTaper.setValue(self.Object.TabTaper)
-        taskd.form.TabMode.setCurrentText(self.Object.TabMode)
-        taskd.form.SwapEnds.setChecked(self.Object.SwapEnds)
-        taskd.form.Margin1.setValue(self.Object.Margin1)
-        taskd.form.Margin2.setValue(self.Object.Margin2)
-        taskd.form.TabHookDepth.setValue(self.Object.TabHookDepth)
-        taskd.form.TabHookLength.setValue(self.Object.TabHookLength)
-        taskd.form.TabHookRadius.setValue(self.Object.TabHookRadius)
-        taskd.form.SwapHookDirection.setChecked(self.Object.SwapHookDirection)
-        self.Object.AutoUpdate = True
         taskd.update()
-        # taskd.updateTabModeSwapEndsState()
+        self.Object.AutoUpdate = True
         FreeCADGui.Control.showDialog(taskd)
         return True
 
@@ -390,39 +362,38 @@ class LBTabsTaskPanel:
     def __init__(self, editing):
         self.editing = editing
         self.obj = None
+        self._expressionBound = False
         # this will create a Qt widget from our ui file
         self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
         QtCore.QObject.connect(self.form.pbUpdateTabFaces, QtCore.SIGNAL("clicked()"), self.updateTabFaces)
         QtCore.QObject.connect(self.form.pbEditTabFaces, QtCore.SIGNAL("clicked()"), self.editTabFaces)
-        # set some default values
-        self.form.TabCount.setValue(0)
-        self.form.TabWidth.setValue(10.0)
-        self.form.TabDepth.setValue(3.0)
-        self.form.GapWidth.setValue(10.0)
-        self.form.TabTaper.setValue(0.0)
         self.form.TabMode.setCurrentIndex(0)
         self.form.SwapEnds.setChecked(False)
-        self.form.Margin1.setValue(0.0)
-        self.form.Margin2.setValue(0.0)
-        self.form.TabHookDepth.setValue(0.0)
-        self.form.TabHookLength.setValue(0.0)
-        self.form.TabHookRadius.setValue(0.0)
         self.form.SwapHookDirection.setChecked(False)
         self.form.TabCount.valueChanged.connect(self.onTabCountChanged)
-        self.form.TabWidth.valueChanged.connect(self.onTabWidthChanged)
-        self.form.TabDepth.valueChanged.connect(self.onTabDepthChanged)
-        self.form.GapWidth.valueChanged.connect(self.onGapWidthChanged)
         self.form.TabMode.currentTextChanged.connect(self.onTabModeChanged)
         self.form.SwapEnds.stateChanged.connect(self.onSwapEndsChanged)
-        self.form.TabTaper.valueChanged.connect(self.onTabTaperChanged)
-        self.form.Margin1.valueChanged.connect(self.onMargin1Changed)
-        self.form.Margin2.valueChanged.connect(self.onMargin2Changed)
-        self.form.TabHookDepth.valueChanged.connect(self.onTabHookDepthChanged)
-        self.form.TabHookLength.valueChanged.connect(self.onTabHookLengthChanged)
-        self.form.TabHookRadius.valueChanged.connect(self.onTabHookRadiusChanged)
         self.form.SwapHookDirection.stateChanged.connect(self.onSwapHookDirectionChanged)
         self.update()
-        # self.updateTabModeSwapEndsState()
+
+    def bindExpressions(self):
+        if self._expressionBound or not self.obj:
+            return
+        obj = self.obj
+        laserhelper.lbBindIntSpinBox(self.form.TabCount, obj, "TabCount")
+        laserhelper.lbBindQuantitySpinBox(self.form.TabWidth, obj, "TabWidth")
+        laserhelper.lbBindQuantitySpinBox(self.form.TabDepth, obj, "TabDepth")
+        laserhelper.lbBindQuantitySpinBox(self.form.GapWidth, obj, "GapWidth")
+        laserhelper.lbBindQuantitySpinBox(self.form.TabTaper, obj, "TabTaper")
+        laserhelper.lbBindQuantitySpinBox(self.form.Margin1, obj, "Margin1")
+        laserhelper.lbBindQuantitySpinBox(self.form.Margin2, obj, "Margin2")
+        laserhelper.lbBindQuantitySpinBox(self.form.TabHookDepth, obj, "TabHookDepth")
+        laserhelper.lbBindQuantitySpinBox(self.form.TabHookLength, obj, "TabHookLength")
+        laserhelper.lbBindQuantitySpinBox(self.form.TabHookRadius, obj, "TabHookRadius")
+        self.form.TabMode.setCurrentText(obj.TabMode)
+        self.form.SwapEnds.setChecked(obj.SwapEnds)
+        self.form.SwapHookDirection.setChecked(obj.SwapHookDirection)
+        self._expressionBound = True
 
     # def updateTabModeSwapEndsState(self):
     #     """Disable TabMode and SwapEnds when TabCount is 0."""
@@ -431,36 +402,21 @@ class LBTabsTaskPanel:
     #     self.form.SwapEnds.setEnabled(enabled and self.form.TabMode.currentText() == "From One End")
 
     def onTabCountChanged(self, val):
-        # self.updateTabModeSwapEndsState()
-        if self.obj:
-            if self.obj.TabMode == "From Both Ends":
-                if val % 2 != 0:
-                    #it needs to be an even number in this mode
-                    if self.obj.TabCount > val:
-                        val = val - 1
-                    else:
-                        val = val + 1
-
-                    self.form.TabCount.setValue(val)
-            self.obj.TabCount = val
-
-    def onTabWidthChanged(self, val):
-        self.obj.TabWidth = val
-
-    def onTabDepthChanged(self, val):
-        self.obj.TabDepth = val
-
-    def onGapWidthChanged(self, val):
-        self.obj.GapWidth = val
+        if self.obj and self.obj.TabMode == "From Both Ends":
+            if val % 2 != 0:
+                if self.obj.TabCount > val:
+                    val = val - 1
+                else:
+                    val = val + 1
+                self.form.TabCount.setProperty("value", val)
 
     def onTabModeChanged(self, val):
         if self.obj:
             self.obj.TabMode = val
-        # self.updateTabModeSwapEndsState()
 
         if self.obj and val == "From Both Ends":
             if self.obj.TabCount % 2 != 0:
-                self.form.TabCount.setValue(self.obj.TabCount + 1)
+                self.form.TabCount.setProperty("value", self.obj.TabCount + 1)
 
     def onSwapEndsChanged(self, val):
         self.obj.SwapEnds = val
@@ -468,25 +424,9 @@ class LBTabsTaskPanel:
     def onSwapHookDirectionChanged(self, val):
         self.obj.SwapHookDirection = val
 
-    def onTabTaperChanged(self, val):
-        self.obj.TabTaper = val
-
-    def onMargin1Changed(self, val):
-        self.obj.Margin1 = val
-
-    def onMargin2Changed(self, val):
-        self.obj.Margin2 = val
-
-    def onTabHookDepthChanged(self, val):
-        self.obj.TabHookDepth = val
-
-    def onTabHookLengthChanged(self, val):
-        self.obj.TabHookLength = val
-
-    def onTabHookRadiusChanged(self, val):
-        self.obj.TabHookRadius = val
-
     def update(self):
+        if self.obj:
+            self.bindExpressions()
         'fills the treeWidgetTabFaces'
         self.form.treeWidgetTabFaces.clear()
         if self.obj:

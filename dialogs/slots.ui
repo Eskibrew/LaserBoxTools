@@ -31,10 +31,10 @@
        </widget>
       </item>
       <item row="7" column="1">
-       <widget class="QDoubleSpinBox" name="GapWidth"/>
+       <widget class="Gui::QuantitySpinBox" name="GapWidth"/>
       </item>
       <item row="11" column="1">
-       <widget class="QDoubleSpinBox" name="Margin2"/>
+       <widget class="Gui::QuantitySpinBox" name="Margin2"/>
       </item>
       <item row="14" column="0">
        <widget class="QLabel" name="label_10">
@@ -47,13 +47,13 @@
        </widget>
       </item>
       <item row="14" column="1">
-       <widget class="QDoubleSpinBox" name="SlotHookLength"/>
+       <widget class="Gui::QuantitySpinBox" name="SlotHookLength"/>
       </item>
       <item row="5" column="1">
-       <widget class="QDoubleSpinBox" name="SlotDepth"/>
+       <widget class="Gui::QuantitySpinBox" name="SlotDepth"/>
       </item>
       <item row="10" column="1">
-       <widget class="QDoubleSpinBox" name="Margin1"/>
+       <widget class="Gui::QuantitySpinBox" name="Margin1"/>
       </item>
       <item row="7" column="0">
        <widget class="QLabel" name="label_4">
@@ -133,10 +133,10 @@
        </widget>
       </item>
       <item row="4" column="1">
-       <widget class="QDoubleSpinBox" name="SlotLength"/>
+       <widget class="Gui::QuantitySpinBox" name="SlotLength"/>
       </item>
       <item row="12" column="1">
-       <widget class="QDoubleSpinBox" name="OffsetFromFace"/>
+       <widget class="Gui::QuantitySpinBox" name="OffsetFromFace"/>
       </item>
       <item row="8" column="1">
        <widget class="QComboBox" name="SlotMode">
@@ -158,7 +158,7 @@
        </widget>
       </item>
       <item row="3" column="1">
-       <widget class="QSpinBox" name="SlotCount">
+       <widget class="Gui::IntSpinBox" name="SlotCount">
         <property name="minimum">
          <number>0</number>
         </property>
@@ -275,4 +275,16 @@
  </tabstops>
  <resources/>
  <connections/>
+ <customwidgets>
+  <customwidget>
+   <class>Gui::QuantitySpinBox</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>Gui/QuantitySpinBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::IntSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>Gui/SpinBox.h</header>
+  </customwidget>
+ </customwidgets>
 </ui>

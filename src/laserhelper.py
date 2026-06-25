@@ -100,6 +100,64 @@ def lbErrorMessage(msg):
     diag.exec_()
 
 
+_last_console_warning = None
+
+
+def lbWarnConsole(msg):
+    """Print a non-blocking warning to the report view, suppressing immediate duplicates."""
+    global _last_console_warning
+    if not msg.endswith('\n'):
+        msg = msg + '\n'
+    if msg == _last_console_warning:
+        return
+    _last_console_warning = msg
+    FreeCAD.Console.PrintWarning(msg)
+
+
+def lbClearConsoleWarning():
+    """Allow the next fit warning to be printed again after a successful layout."""
+    global _last_console_warning
+    _last_console_warning = None
+
+
+def lbBindQuantitySpinBox(widget, obj, prop, on_changed=None):
+    """Bind a Gui::QuantitySpinBox to a document length/quantity property (enables expressions)."""
+    binder = Gui.ExpressionBinding(widget)
+    binder.bind(obj, prop)
+    widget.blockSignals(True)
+    widget.setProperty("value", getattr(obj, prop))
+    widget.blockSignals(False)
+
+    def _on_value_changed(*_args):
+        if binder.hasExpression():
+            return
+        setattr(obj, prop, widget.property("rawValue"))
+        if on_changed:
+            on_changed()
+
+    widget.valueChanged.connect(_on_value_changed)
+    return binder
+
+
+def lbBindIntSpinBox(widget, obj, prop, on_changed=None):
+    """Bind a Gui::IntSpinBox to a document integer property (enables expressions)."""
+    binder = Gui.ExpressionBinding(widget)
+    binder.bind(obj, prop)
+    widget.blockSignals(True)
+    widget.setProperty("value", getattr(obj, prop))
+    widget.blockSignals(False)
+
+    def _on_value_changed(*_args):
+        if binder.hasExpression():
+            return
+        setattr(obj, prop, widget.property("value"))
+        if on_changed:
+            on_changed()
+
+    widget.valueChanged.connect(_on_value_changed)
+    return binder
+
+
 def lbBelongToBody(item, body):
     if (body is None):
         return False
@@ -353,8 +411,14 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
             p1 = p1 - gapVector - tabVector
 
     if margin1 + margin2 + (tabOrSlotWidth * tabOrSlotCount) + (gapWidth * gapCount) > edge.Length:
-        lbErrorMessage("Error: With these setting, the tabs will not fit on the face.\nPlease adjust at least one parameter")
+        label = "Tabs" if type == "Tab" else "Slots"
+        lbWarnConsole(
+            "{}: Will not fit on the face with the current settings. "
+            "Adjust count, width, gap, or margins.".format(label)
+        )
         return []
+
+    lbClearConsoleWarning()
 
     numTabs = tabOrSlotCount
 
@@ -768,8 +832,13 @@ def lbMakeElementFaces(edge1, edge2, lengthDir, widthDir, elementCount, elementW
             Edge2 = Edge2 - (spacingVector * (gapCount / 2))
 
     if margin1 + margin2 + (elementWidth * elementCount) + (elementSpacing * gapCount) > edge1.Length:
-        lbErrorMessage("Error: With these setting, the elements will not fit on the face.\nPlease adjust at least one parameter")
+        lbWarnConsole(
+            "Living hinge: Elements will not fit on the face with the current settings. "
+            "Adjust element count, width, spacing, or margins."
+        )
         return []
+
+    lbClearConsoleWarning()
 
     faces = lbCreateLivingHingeElements(elementCount, elementVector, elementDepth, lengthDir, spacingVector, elementMode, elementType, Edge1, Edge2, Edge1End2, Edge2End2)
 

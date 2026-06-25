@@ -176,17 +176,8 @@ class LBLivingHingeViewProviderTree:
         taskd = LBLivingHingeTaskPanel(True)
         taskd.obj = vobj.Object
         self.Object.AutoUpdate = False
-        taskd.form.ElementCount.setValue(self.Object.ElementCount)
-        taskd.form.ElementWidth.setValue(self.Object.ElementWidth)
-        taskd.form.ElementDepth.setValue(self.Object.ElementDepth)
-        taskd.form.ElementSpacing.setValue(self.Object.ElementSpacing)
-        taskd.form.ElementMode.setCurrentText(self.Object.ElementMode)
-        taskd.form.ElementType.setCurrentText(self.Object.ElementType)
-        taskd.form.SwapEnds.setChecked(self.Object.SwapEnds)
-        taskd.form.Margin1.setValue(self.Object.Margin1)
-        taskd.form.Margin2.setValue(self.Object.Margin2)
-        self.Object.AutoUpdate = True
         taskd.update()
+        self.Object.AutoUpdate = True
         taskd.updateElementModeSwapEndsState()
         FreeCADGui.Control.showDialog(taskd)
         return True
@@ -260,17 +251,8 @@ class LBLivingHingeViewProviderFlat:
         taskd = LBLivingHingeTaskPanel(True)
         taskd.obj = vobj.Object
         self.Object.AutoUpdate = False
-        taskd.form.ElementCount.setValue(self.Object.ElementCount)
-        taskd.form.ElementWidth.setValue(self.Object.ElementWidth)
-        taskd.form.ElementDepth.setValue(self.Object.ElementDepth)
-        taskd.form.ElementSpacing.setValue(self.Object.ElementSpacing)
-        taskd.form.ElementMode.setCurrentText(self.Object.ElementMode)
-        taskd.form.ElementType.setCurrentText(self.Object.ElementType)
-        taskd.form.SwapEnds.setChecked(self.Object.SwapEnds)
-        taskd.form.Margin1.setValue(self.Object.Margin1)
-        taskd.form.Margin2.setValue(self.Object.Margin2)
-        self.Object.AutoUpdate = True
         taskd.update()
+        self.Object.AutoUpdate = True
         taskd.updateElementModeSwapEndsState()
         FreeCADGui.Control.showDialog(taskd)
         return True
@@ -287,60 +269,52 @@ class LBLivingHingeTaskPanel:
     def __init__(self, editing):
         self.editing = editing
         self.obj = None
+        self._expressionBound = False
         # this will create a Qt widget from our ui file
         self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
         QtCore.QObject.connect(self.form.pbUpdateElementFaces, QtCore.SIGNAL("clicked()"), self.updateElementFaces)
         QtCore.QObject.connect(self.form.pbEditElementFaces, QtCore.SIGNAL("clicked()"), self.editElementFaces)
-        # set some default values
-        self.form.ElementCount.setValue(4)
-        self.form.ElementWidth.setValue(0.1)
-        self.form.ElementDepth.setValue(0.0)
-        self.form.ElementSpacing.setValue(1.0)
         self.form.ElementMode.setCurrentIndex(0)
         self.form.ElementType.setCurrentIndex(0)
         self.form.SwapEnds.setChecked(False)
-        self.form.Margin1.setValue(0.0)
-        self.form.Margin2.setValue(0.0)
         self.form.ElementCount.valueChanged.connect(self.onElementCountChanged)
-        self.form.ElementWidth.valueChanged.connect(self.onElementWidthChanged)
-        self.form.ElementDepth.valueChanged.connect(self.onElementDepthChanged)
-        self.form.ElementSpacing.valueChanged.connect(self.onElementSpacingChanged)
         self.form.ElementMode.currentTextChanged.connect(self.onElementModeChanged)
         self.form.ElementType.currentTextChanged.connect(self.onElementTypeChanged)
         self.form.SwapEnds.stateChanged.connect(self.onSwapEndsChanged)
-        self.form.Margin1.valueChanged.connect(self.onMargin1Changed)
-        self.form.Margin2.valueChanged.connect(self.onMargin2Changed)
         self.update()
+
+    def bindExpressions(self):
+        if self._expressionBound or not self.obj:
+            return
+        obj = self.obj
+        laserhelper.lbBindIntSpinBox(self.form.ElementCount, obj, "ElementCount")
+        laserhelper.lbBindQuantitySpinBox(self.form.ElementWidth, obj, "ElementWidth")
+        laserhelper.lbBindQuantitySpinBox(self.form.ElementDepth, obj, "ElementDepth")
+        laserhelper.lbBindQuantitySpinBox(self.form.ElementSpacing, obj, "ElementSpacing")
+        laserhelper.lbBindQuantitySpinBox(self.form.Margin1, obj, "Margin1")
+        laserhelper.lbBindQuantitySpinBox(self.form.Margin2, obj, "Margin2")
+        self.form.ElementMode.setCurrentText(obj.ElementMode)
+        self.form.ElementType.setCurrentText(obj.ElementType)
+        self.form.SwapEnds.setChecked(obj.SwapEnds)
+        self._expressionBound = True
         self.updateElementModeSwapEndsState()
 
     def updateElementModeSwapEndsState(self):
         """Disable ElementMode and SwapEnds when ElementCount is 0."""
-        enabled = self.form.ElementCount.value() != 0
+        count = self.form.ElementCount.property("value") if self._expressionBound else self.form.ElementCount.value()
+        enabled = count != 0
         self.form.ElementMode.setEnabled(enabled)
         self.form.SwapEnds.setEnabled(enabled and self.form.ElementMode.currentText() == "From One End")
 
     def onElementCountChanged(self, val):
         self.updateElementModeSwapEndsState()
-        if self.obj:
-            if self.obj.ElementMode == "From Both Ends":
-                if val % 2 != 0:
-                    #it needs to be an even number in this mode
-                    if self.obj.ElementCount > val:
-                        val = val - 1
-                    else:
-                        val = val + 1
-
-                    self.form.ElementCount.setValue(val)
-            self.obj.ElementCount = val
-
-    def onElementWidthChanged(self, val):
-        self.obj.ElementWidth = val
-
-    def onElementDepthChanged(self, val):
-        self.obj.ElementDepth = val
-
-    def onElementSpacingChanged(self, val):
-        self.obj.ElementSpacing = val
+        if self.obj and self.obj.ElementMode == "From Both Ends":
+            if val % 2 != 0:
+                if self.obj.ElementCount > val:
+                    val = val - 1
+                else:
+                    val = val + 1
+                self.form.ElementCount.setProperty("value", val)
 
     def onElementModeChanged(self, val):
         if self.obj:
@@ -349,7 +323,7 @@ class LBLivingHingeTaskPanel:
 
         if self.obj and val == "From Both Ends":
             if self.obj.ElementCount % 2 != 0:
-                self.form.ElementCount.setValue(self.obj.ElementCount + 1)
+                self.form.ElementCount.setProperty("value", self.obj.ElementCount + 1)
 
     def onElementTypeChanged(self, val):
         if self.obj:
@@ -358,13 +332,9 @@ class LBLivingHingeTaskPanel:
     def onSwapEndsChanged(self, val):
         self.obj.SwapEnds = val
 
-    def onMargin1Changed(self, val):
-        self.obj.Margin1 = val
-
-    def onMargin2Changed(self, val):
-        self.obj.Margin2 = val
-
     def update(self):
+        if self.obj:
+            self.bindExpressions()
         'fills the treeWidgetElementFaces'
         self.form.treeWidgetElementFaces.clear()
         if self.obj:

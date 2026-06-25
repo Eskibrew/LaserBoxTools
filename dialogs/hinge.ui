@@ -21,23 +21,23 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="8" column="3">
-       <widget class="QDoubleSpinBox" name="Margin2"/>
+       <widget class="Gui::QuantitySpinBox" name="Margin2"/>
       </item>
       <item row="1" column="3">
-       <widget class="QDoubleSpinBox" name="ElementWidth">
+       <widget class="Gui::QuantitySpinBox" name="ElementWidth">
         <property name="minimum">
          <double>0.100000000000000</double>
         </property>
        </widget>
       </item>
       <item row="3" column="3">
-       <widget class="QDoubleSpinBox" name="ElementSpacing"/>
+       <widget class="Gui::QuantitySpinBox" name="ElementSpacing"/>
       </item>
       <item row="2" column="3">
-       <widget class="QDoubleSpinBox" name="ElementDepth"/>
+       <widget class="Gui::QuantitySpinBox" name="ElementDepth"/>
       </item>
       <item row="7" column="3">
-       <widget class="QDoubleSpinBox" name="Margin1"/>
+       <widget class="Gui::QuantitySpinBox" name="Margin1"/>
       </item>
       <item row="0" column="0" colspan="3">
        <widget class="QLabel" name="label">
@@ -67,7 +67,7 @@
        </widget>
       </item>
       <item row="0" column="3">
-       <widget class="QSpinBox" name="ElementCount">
+       <widget class="Gui::IntSpinBox" name="ElementCount">
         <property name="minimum">
          <number>0</number>
         </property>
@@ -253,4 +253,16 @@
  </tabstops>
  <resources/>
  <connections/>
+ <customwidgets>
+  <customwidget>
+   <class>Gui::QuantitySpinBox</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>Gui/QuantitySpinBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::IntSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>Gui/SpinBox.h</header>
+  </customwidget>
+ </customwidgets>
 </ui>

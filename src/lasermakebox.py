@@ -30,6 +30,7 @@ from PySide import QtCore, QtGui
 
 from src.lasertabs import LBCreateTabsFeature
 from src.laserslots import LBCreateSlotsFeature
+import src.laserhelper as laserhelper
 
 __dir__ = os.path.dirname(__file__)
 icons = os.path.join(__dir__, '../Resources/icons')
@@ -672,14 +673,25 @@ def error_message(msg):
     diag.exec_()
 
 
+class LBMakeBoxParams:
+    """Hidden document object holding box parameters so the task panel can use expressions."""
+
+    def __init__(self, obj):
+        obj.Proxy = self
+        obj.addProperty("App::PropertyLength", "BoxLength", "Dimensions").BoxLength = 200.0
+        obj.addProperty("App::PropertyLength", "BoxWidth", "Dimensions").BoxWidth = 100.0
+        obj.addProperty("App::PropertyLength", "BoxHeight", "Dimensions").BoxHeight = 50.0
+        obj.addProperty("App::PropertyLength", "BoxThickness", "Dimensions").BoxThickness = 3.0
+        obj.addProperty("App::PropertyInteger", "TabSlotCount", "TabsAndSlots").TabSlotCount = 0
+        obj.addProperty("App::PropertyLength", "TabSlotWidth", "TabsAndSlots").TabSlotWidth = 10.0
+        obj.addProperty("App::PropertyLength", "GapWidth", "TabsAndSlots").GapWidth = 10.0
+        obj.addProperty("App::PropertyLength", "TabTaper", "TabsAndSlots").TabTaper = 0.0
+
+
 class LaserMakeBoxTaskPanel:
-    def __init__(self):
-        # this will create a Qt widget from our ui file
+    def __init__(self, params_obj):
+        self.params_obj = params_obj
         self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
-        self.form.BoxLength.setValue(200)
-        self.form.BoxWidth.setValue(100)
-        self.form.BoxHeight.setValue(50)
-        self.form.BoxThickness.setValue(3)
         self.form.rbPartDesign.setChecked(True)
         self.form.cbTop.setChecked(True)
         self.form.cbBottom.setChecked(True)
@@ -688,13 +700,29 @@ class LaserMakeBoxTaskPanel:
         self.form.cbFront.setChecked(True)
         self.form.cbBack.setChecked(True)
         self.form.cbUseTabsAndSlots.setChecked(False)
+        self.bindExpressions()
 
+    def bindExpressions(self):
+        obj = self.params_obj
+        laserhelper.lbBindQuantitySpinBox(self.form.BoxLength, obj, "BoxLength")
+        laserhelper.lbBindQuantitySpinBox(self.form.BoxWidth, obj, "BoxWidth")
+        laserhelper.lbBindQuantitySpinBox(self.form.BoxHeight, obj, "BoxHeight")
+        laserhelper.lbBindQuantitySpinBox(self.form.BoxThickness, obj, "BoxThickness")
+        laserhelper.lbBindIntSpinBox(self.form.TabSlotCount, obj, "TabSlotCount")
+        laserhelper.lbBindQuantitySpinBox(self.form.TabSlotWidth, obj, "TabSlotWidth")
+        laserhelper.lbBindQuantitySpinBox(self.form.GapWidth, obj, "GapWidth")
+        laserhelper.lbBindQuantitySpinBox(self.form.TabTaper, obj, "TabTaper")
+
+    def _removeParamsObject(self):
+        doc = FreeCAD.ActiveDocument
+        if self.params_obj and doc.getObject(self.params_obj.Name):
+            doc.removeObject(self.params_obj.Name)
 
     def accept(self):
-        length = self.form.BoxLength.value()
-        width = self.form.BoxWidth.value()
-        height = self.form.BoxHeight.value()
-        thickness = self.form.BoxThickness.value()
+        length = self.params_obj.BoxLength.Value
+        width = self.params_obj.BoxWidth.Value
+        height = self.params_obj.BoxHeight.Value
+        thickness = self.params_obj.BoxThickness.Value
 
         if length == 0:
             error_message('length cannot be zero!')
@@ -716,6 +744,13 @@ class LaserMakeBoxTaskPanel:
             error_message('At least one box part must be selected!')
             return
 
+        tab_slot_count = self.params_obj.TabSlotCount
+        tab_slot_width = self.params_obj.TabSlotWidth.Value
+        tab_taper = self.params_obj.TabTaper.Value
+        gap_width = self.params_obj.GapWidth.Value
+
+        self._removeParamsObject()
+
         if self.form.rbPart.isChecked():
             laser_make_box_pieces_simple(length, width, height, thickness,
                                         self.form.cbTop.isChecked(),
@@ -725,10 +760,10 @@ class LaserMakeBoxTaskPanel:
                                         self.form.cbFront.isChecked(),
                                         self.form.cbBack.isChecked(),
                                         self.form.cbUseTabsAndSlots.isChecked(),
-                                        self.form.TabSlotCount.value(),
-                                        self.form.TabSlotWidth.value(),
-                                        self.form.TabTaper.value(),
-                                        self.form.GapWidth.value(),
+                                        tab_slot_count,
+                                        tab_slot_width,
+                                        tab_taper,
+                                        gap_width,
                                         "From Middle",
                                         0,
                                         0
@@ -742,14 +777,18 @@ class LaserMakeBoxTaskPanel:
                                         self.form.cbFront.isChecked(),
                                         self.form.cbBack.isChecked(),
                                         self.form.cbUseTabsAndSlots.isChecked(),
-                                        self.form.TabSlotCount.value(),
-                                        self.form.TabSlotWidth.value(),
-                                        self.form.TabTaper.value(),
-                                        self.form.GapWidth.value(),
+                                        tab_slot_count,
+                                        tab_slot_width,
+                                        tab_taper,
+                                        gap_width,
                                         "From Middle",
                                         0,
                                         0
                                         )
+        FreeCADGui.Control.closeDialog()
+
+    def reject(self):
+        self._removeParamsObject()
         FreeCADGui.Control.closeDialog()
 
 
@@ -767,10 +806,12 @@ class LaserMakeBox:
         return FreeCAD.ActiveDocument is not None
 
     def Activated(self):
-        panel = LaserMakeBoxTaskPanel()
+        doc = FreeCAD.ActiveDocument
+        params = doc.addObject("App::FeaturePython", doc.getUniqueObjectName("LBBasicBoxParams"))
+        LBMakeBoxParams(params)
+        params.ViewObject.Visibility = False
+        panel = LaserMakeBoxTaskPanel(params)
         FreeCADGui.Control.showDialog(panel)
-        #vp = ViewProviderGroupBox(groupBox.ViewObject)
-        #vp.setEdit(ViewProviderGroupBox)
         return
 
 
