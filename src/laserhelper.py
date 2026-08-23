@@ -857,6 +857,51 @@ def lbGetValidFaceNames(selFaceNames):
     return [n for n in names if n and not n.startswith('?')]
 
 
+def lbFuseSolids(solidlist):
+    """Fuse a list of solids in one operation (multi-shape fuse when possible)."""
+    if not solidlist:
+        return None
+    if len(solidlist) == 1:
+        return solidlist[0]
+    try:
+        return solidlist[0].fuse(tuple(solidlist[1:]))
+    except Exception:
+        try:
+            return solidlist[0].multiFuse(tuple(solidlist[1:]))
+        except Exception:
+            combined = solidlist[0]
+            for solid in solidlist[1:]:
+                combined = combined.fuse(solid)
+            return combined
+
+
+def lbMultiCut(baseShape, solidlist, featureLabel=""):
+    """Cut baseShape with all cutter solids in one boolean operation."""
+    if not solidlist:
+        return baseShape
+    try:
+        if len(solidlist) == 1:
+            cutResult = baseShape.cut(solidlist[0])
+        else:
+            cutResult = baseShape.cut(tuple(solidlist))
+        if cutResult.isNull() or not cutResult.isValid():
+            if featureLabel:
+                FreeCAD.Console.PrintWarning("{}: Cut produced invalid result\n".format(featureLabel))
+            return baseShape
+        return cutResult
+    except Exception:
+        try:
+            combinedCutter = lbFuseSolids(solidlist)
+            cutResult = baseShape.cut(combinedCutter)
+            if cutResult.isNull() or not cutResult.isValid():
+                return baseShape
+            return cutResult
+        except Exception as e2:
+            if featureLabel:
+                FreeCAD.Console.PrintWarning("{}: Cut failed: {}\n".format(featureLabel, str(e2)))
+            return baseShape
+
+
 def lbCreateTabs(tabCount, tabWidth, gapWidth, tabDepth, mode, swapends, tabTaper, margin1, margin2, tabHookDepth, tabHookLength, tabHookRadius, swapHookDirection, subtraction = False, refine = True, selFaceNames = '', selObject = ''):
     finalShape = selObject
     solidlist =[]
@@ -927,19 +972,13 @@ def lbCreateTabs(tabCount, tabWidth, gapWidth, tabDepth, mode, swapends, tabTape
                 solidlist.append(tabSolid)
                 #Part.show(tabSolid)
 
-    resultSolid = selObject
-
-    # if we have any solids, we need to fuse them together to create the final shape
+    # Fuse all tab solids first, then cut+fuse with base (constant boolean count vs tab count).
     if len(solidlist) > 0:
-        for solid in solidlist:
-            resultSolid = resultSolid.fuse(solid)
-
+        combinedTabs = lbFuseSolids(solidlist)
+        finalShape = finalShape.cut(combinedTabs)
+        finalShape = finalShape.fuse(combinedTabs)
         if refine:
-            resultSolid = resultSolid.removeSplitter()
-
-        # Merge final list
-        finalShape = finalShape.cut(resultSolid)
-        finalShape = finalShape.fuse(resultSolid)
+            finalShape = finalShape.removeSplitter()
 
     return finalShape
 
@@ -1023,11 +1062,8 @@ def lbCreateSlots(slotCount, slotLength, gapWidth, slotDepth, mode, swapends, ma
                 solidlist.append(slotSolid)
                 #Part.show(slotSolid)  # Debug: add to tree for visual inspection
 
-    # Cut each slot solid from the base object (accumulate cuts)
     if len(solidlist) > 0:
-        for solid in solidlist:
-            finalShape = finalShape.cut(solid)
-
+        finalShape = lbMultiCut(finalShape, solidlist, "Slots")
         if refine:
             finalShape = finalShape.removeSplitter()
 
@@ -1134,28 +1170,8 @@ def lbCreateLivingHinge(elementCount, elementWidth, elementDepth, elementSpacing
             solidlist.append(elementSolid)
             #Part.show(elementSolid)
 
-    # Cut all elements in one operation. Multi-tool cut is faster than fuse-then-cut or N sequential cuts.
     if len(solidlist) > 0:
-        try:
-            if len(solidlist) == 1:
-                cutResult = finalShape.cut(solidlist[0])
-            else:
-                cutResult = finalShape.cut(tuple(solidlist))
-            if cutResult.isNull() or not cutResult.isValid():
-                FreeCAD.Console.PrintWarning("LivingHinge: Cut produced invalid result\n")
-            else:
-                finalShape = cutResult
-        except Exception as e:
-            # Fallback: fuse then cut (multi-tool cut may need OCCT 6.9+)
-            try:
-                combinedCutter = solidlist[0]
-                for solid in solidlist[1:]:
-                    combinedCutter = combinedCutter.fuse(solid)
-                cutResult = finalShape.cut(combinedCutter)
-                if not (cutResult.isNull() or not cutResult.isValid()):
-                    finalShape = cutResult
-            except Exception as e2:
-                FreeCAD.Console.PrintWarning("LivingHinge: Cut failed: {}\n".format(str(e2)))
+        finalShape = lbMultiCut(finalShape, solidlist, "LivingHinge")
 
     if refine:
         finalShape = finalShape.removeSplitter()
