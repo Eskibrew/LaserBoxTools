@@ -164,6 +164,13 @@ def LBCreateSlotsFeature(doc, link_obj, face_names, slot_count, slot_width, slot
     return a
 
 
+_LB_SLOTS_AUTOUPDATE_PROPS = (
+    "SlotDepth", "SlotLength", "GapWidth", "SlotCount", "Refine", "SlotMode",
+    "Margin1", "Margin2", "OffsetFromFace", "baseObject", "SwapEnds",
+    "SlotHookLength", "SwapHookDirection",
+)
+
+
 class LBSlotsViewProviderTree:
     "A View provider that nests children objects under the created one, like Part"
 
@@ -189,21 +196,7 @@ class LBSlotsViewProviderTree:
 
     def updateData(self, fp, prop):
         '''If a property of the handled feature has changed we have the chance to handle this here'''
-        if fp.AutoUpdate:
-            if  prop == "SlotDepth" or \
-                prop == "SlotLength" or \
-                prop == "GapWidth" or \
-                prop == "SlotCount" or \
-                prop == "Refine" or \
-                prop == "SlotMode" or \
-                prop == "Margin1" or \
-                prop == "Margin2" or \
-                prop == "OffsetFromFace" or \
-                prop == "baseObject" or \
-                prop == "SwapEnds" or \
-                prop == "SlotHookLength" or \
-                prop == "SwapHookDirection":
-                fp.Document.recompute()  # Full document recompute so dependents (e.g. Tabs) update
+        laserhelper.lbAutoRecomputeOnProperty(fp, prop, _LB_SLOTS_AUTOUPDATE_PROPS)
         return
 
     def getDisplayModes(self, vobj):
@@ -268,21 +261,7 @@ class LBSlotsViewProviderFlat:
 
     def updateData(self, fp, prop):
         '''If a property of the handled feature has changed we have the chance to handle this here'''
-        if fp.AutoUpdate:
-            if  prop == "SlotDepth" or \
-                prop == "SlotLength" or \
-                prop == "GapWidth" or \
-                prop == "SlotCount" or \
-                prop == "Refine" or \
-                prop == "SlotMode" or \
-                prop == "Margin1" or \
-                prop == "Margin2" or \
-                prop == "OffsetFromFace" or \
-                prop == "baseObject" or \
-                prop == "SwapEnds" or \
-                prop == "SlotHookLength" or \
-                prop == "SwapHookDirection":
-                fp.Document.recompute()  # Full document recompute so dependents (e.g. Tabs) update
+        laserhelper.lbAutoRecomputeOnProperty(fp, prop, _LB_SLOTS_AUTOUPDATE_PROPS)
         return
 
     def getDisplayModes(self,obj):

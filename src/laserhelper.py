@@ -37,6 +37,55 @@ import BOPTools.SplitFeatures
 
 lbEpsilon = 0.0000001
 
+
+def lbShouldSkipAutoRecompute(fp):
+    """True when Document.recompute() from a ViewProvider is unsafe.
+
+    AutoUpdate used to call recompute() from updateData. During file open,
+    restoring the view-provider Proxy runs updateData for every property
+    while the document is still Restoring. That premature recompute hits
+    SketchObject::rebuildExternalGeometry and SIGSEGVs on FreeCAD 1.1.x.
+    Nested recomputes (updateData during an in-progress recompute) can
+    also loop with dependent Tabs/Slots features.
+    """
+    if fp is None:
+        return True
+    try:
+        is_restoring = getattr(fp, "isRestoring", None)
+        if callable(is_restoring) and is_restoring():
+            return True
+    except Exception:
+        pass
+    doc = getattr(fp, "Document", None)
+    if doc is None:
+        return True
+    try:
+        if getattr(doc, "Restoring", False):
+            return True
+    except Exception:
+        pass
+    try:
+        if getattr(doc, "Recomputing", False):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def lbAutoRecomputeOnProperty(fp, prop, watched_props):
+    """Recompute the document when AutoUpdate is on and prop is watched.
+
+    Skips during document restore and while a recompute is already running.
+    """
+    if not hasattr(fp, "AutoUpdate") or not fp.AutoUpdate:
+        return
+    if prop not in watched_props:
+        return
+    if lbShouldSkipAutoRecompute(fp):
+        return
+    fp.Document.recompute()
+
+
 def lbGetThicknessFromFace(selFace, selObject, thicknessDir):
     """Get the distance from the selected face to the opposite face in the given normal direction.
     thicknessDir should point outward from the selected face (e.g. face normal).

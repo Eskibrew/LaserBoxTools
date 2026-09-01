@@ -188,6 +188,13 @@ def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_dep
     return a
 
 
+_LB_TABS_AUTOUPDATE_PROPS = (
+    "TabDepth", "TabWidth", "GapWidth", "TabCount", "TabTaper", "Refine",
+    "TabMode", "Margin1", "Margin2", "baseObject", "SwapEnds",
+    "TabHookDepth", "TabHookLength", "TabHookRadius", "SwapHookDirection",
+)
+
+
 class LBTabsViewProviderTree:
     "A View provider that nests children objects under the created one, like Part"
 
@@ -212,24 +219,8 @@ class LBTabsViewProviderTree:
         viewObject.Document.setEdit(viewObject.Object, 0)
 
     def updateData(self, fp, prop):
-        '''If a property of the handled feature has changed we have the chance to handle this here''' 
-        if fp.AutoUpdate:
-            if  prop == "TabDepth" or \
-                prop == "TabWidth" or \
-                prop == "GapWidth" or \
-                prop == "TabCount" or \
-                prop == "TabTaper" or \
-                prop == "Refine" or \
-                prop == "TabMode" or \
-                prop == "Margin1" or \
-                prop == "Margin2" or \
-                prop == "baseObject" or \
-                prop == "SwapEnds" or \
-                prop == "TabHookDepth" or \
-                prop == "TabHookLength" or \
-                prop == "TabHookRadius" or \
-                prop == "SwapHookDirection":
-                fp.Document.recompute()  # Full document recompute so dependents update immediately
+        '''If a property of the handled feature has changed we have the chance to handle this here'''
+        laserhelper.lbAutoRecomputeOnProperty(fp, prop, _LB_TABS_AUTOUPDATE_PROPS)
         return
 
     def getDisplayModes(self, vobj):
@@ -293,23 +284,7 @@ class LBTabsViewProviderFlat:
 
     def updateData(self, fp, prop):
         '''If a property of the handled feature has changed we have the chance to handle this here'''
-        if fp.AutoUpdate:
-            if  prop == "TabDepth" or \
-                prop == "TabWidth" or \
-                prop == "GapWidth" or \
-                prop == "TabCount" or \
-                prop == "TabTaper" or \
-                prop == "Refine" or \
-                prop == "TabMode" or \
-                prop == "Margin1" or \
-                prop == "Margin2" or \
-                prop == "baseObject" or \
-                prop == "SwapEnds" or \
-                prop == "TabHookDepth" or \
-                prop == "TabHookLength" or \
-                prop == "TabHookRadius" or \
-                prop == "SwapHookDirection":
-                fp.Document.recompute()  # Full document recompute so dependents update immediately
+        laserhelper.lbAutoRecomputeOnProperty(fp, prop, _LB_TABS_AUTOUPDATE_PROPS)
         return
 
     def getDisplayModes(self,obj):

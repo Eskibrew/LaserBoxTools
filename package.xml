@@ -2,8 +2,8 @@
 <package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
   <name>LaserBoxTools</name>
   <description>A FreeCAD workbench for designing laser-cut boxes and enclosures. Create parametric tabs, slots, and living hinges on your 3D models for easy laser cutting and assembly.</description>
-  <version>0.3.0</version>
-  <date>2026-08-23</date>
+  <version>0.4.0</version>
+  <date>2026-09-01</date>
   <maintainer>Eskibrew</maintainer>
   <author>Eskibrew</author>
   <license file="LICENSE">LGPL-2.1-or-later</license>

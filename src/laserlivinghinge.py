@@ -100,6 +100,11 @@ class LBGenerateLivingHinge:
         fp.Shape = s
 
 
+_LB_HINGE_AUTOUPDATE_PROPS = (
+    "ElementDepth", "ElementWidth", "ElementCount", "ElementSpacing", "Refine",
+    "ElementMode", "ElementType", "Margin1", "Margin2", "baseObject", "SwapEnds",
+)
+
 
 class LBLivingHingeViewProviderTree:
     "A View provider that nests children objects under the created one, like Part"
@@ -125,20 +130,8 @@ class LBLivingHingeViewProviderTree:
         viewObject.Document.setEdit(viewObject.Object, 0)
 
     def updateData(self, fp, prop):
-        '''If a property of the handled feature has changed we have the chance to handle this here''' 
-        if fp.AutoUpdate:
-            if  prop == "ElementDepth" or \
-                prop == "ElementWidth" or \
-                prop == "ElementCount" or \
-                prop == "ElementSpacing" or \
-                prop == "Refine" or \
-                prop == "ElementMode" or \
-                prop == "ElementType" or \
-                prop == "Margin1" or \
-                prop == "Margin2" or \
-                prop == "baseObject" or \
-                prop == "SwapEnds":
-                fp.Document.recompute()  # Full document recompute so dependents update immediately
+        '''If a property of the handled feature has changed we have the chance to handle this here'''
+        laserhelper.lbAutoRecomputeOnProperty(fp, prop, _LB_HINGE_AUTOUPDATE_PROPS)
         return
 
     def getDisplayModes(self, vobj):
@@ -203,19 +196,7 @@ class LBLivingHingeViewProviderFlat:
 
     def updateData(self, fp, prop):
         '''If a property of the handled feature has changed we have the chance to handle this here'''
-        if fp.AutoUpdate:
-            if  prop == "ElementDepth" or \
-                prop == "ElementWidth" or \
-                prop == "ElementCount" or \
-                prop == "ElementSpacing" or \
-                prop == "Refine" or \
-                prop == "ElementMode" or \
-                prop == "ElementType" or \
-                prop == "Margin1" or \
-                prop == "Margin2" or \
-                prop == "baseObject" or \
-                prop == "SwapEnds":
-                fp.Document.recompute()  # Full document recompute so dependents update immediately
+        laserhelper.lbAutoRecomputeOnProperty(fp, prop, _LB_HINGE_AUTOUPDATE_PROPS)
         return
 
     def getDisplayModes(self,obj):

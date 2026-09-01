@@ -24,9 +24,15 @@ from PySide import QtCore
 import FreeCAD as App
 #from FreeCAD import Gui
 import os
+import sys
 import laser_box_tools_locator
 
 laser_box_tools_path = os.path.dirname(laser_box_tools_locator.__file__)
+# Initialize() runs after FreeCAD has finished loading InitGui.py, at which
+# point the workbench directory may no longer be on sys.path. Keep it there
+# so `from src import ...` (and the src.* imports in those modules) work.
+if laser_box_tools_path not in sys.path:
+    sys.path.append(laser_box_tools_path)
 lb_icons_path = os.path.join(laser_box_tools_path, 'Resources', 'icons')
 main_laser_box_tools_icon = os.path.join(lb_icons_path, 'LBLogo.svg')
 
