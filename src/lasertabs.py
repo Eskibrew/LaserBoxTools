@@ -65,6 +65,8 @@ def LBEnsureTabHookProperties(obj):
         obj.addProperty("App::PropertyLength", "TabHookLength", "Parameters", "Tab Hook Length").TabHookLength = 0.0
     if not hasattr(obj, 'TabHookRadius'):
         obj.addProperty("App::PropertyLength", "TabHookRadius", "Parameters", "Tab Hook Radius").TabHookRadius = 0.0
+    if not hasattr(obj, 'Kerf'):
+        obj.addProperty("App::PropertyLength", "Kerf", "Parameters", "Laser kerf (full beam width). Tabs are widened by kerf/2 on each side to compensate.").Kerf = 0.0
 
 
 class LBGenerateTabs:
@@ -115,6 +117,8 @@ class LBGenerateTabs:
         obj.addProperty("App::PropertyLength","TabHookRadius","Parameters",_tip_).TabHookRadius = 0.0
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Swap Hook Direction")
         obj.addProperty("App::PropertyBool","SwapHookDirection","Parameters",_tip_).SwapHookDirection = False
+        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Laser kerf (full beam width). Tabs are widened by kerf/2 on each side to compensate.")
+        obj.addProperty("App::PropertyLength","Kerf","Parameters",_tip_).Kerf = 0.0
 
     def getElementMapVersion(self, _fp, ver, _prop, restored):
         #TODO not sure what this is
@@ -133,12 +137,13 @@ class LBGenerateTabs:
                         margin1 = fp.Margin1.Value, margin2 = fp.Margin2.Value,
                         tabHookDepth = fp.TabHookDepth.Value, tabHookLength = fp.TabHookLength.Value, tabHookRadius = fp.TabHookRadius.Value,
                         swapHookDirection = fp.SwapHookDirection,
-                        subtraction = False, refine = fp.Refine, selFaceNames = face, selObject = Main_Object)
+                        subtraction = False, refine = fp.Refine, selFaceNames = face, selObject = Main_Object,
+                        kerf = fp.Kerf.Value)
         fp.baseObject[0].ViewObject.Visibility = False
         fp.Shape = s
 
 
-def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_depth, gap_width, tab_mode, tab_taper, margin1, margin2, refine=True, plate_for_name=None):
+def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_depth, gap_width, tab_mode, tab_taper, margin1, margin2, refine=True, plate_for_name=None, kerf=0.0):
     """Create a parametric Tabs feature linked to link_obj (no GUI selection).
 
     link_obj: object for baseObject / FaceN refs (PartDesign: Body.Tip, e.g. Pad — not the Body).
@@ -178,6 +183,7 @@ def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_dep
     a.TabHookLength = 0.0
     a.TabHookRadius = 0.0
     a.SwapHookDirection = False
+    a.Kerf = float(kerf)
     label_src = plate_for_name if plate_for_name is not None else link_obj
     a.Label = "Tabs ({})".format(label_src.Label)
     if pd_body is not None:
@@ -192,6 +198,7 @@ _LB_TABS_AUTOUPDATE_PROPS = (
     "TabDepth", "TabWidth", "GapWidth", "TabCount", "TabTaper", "Refine",
     "TabMode", "Margin1", "Margin2", "baseObject", "SwapEnds",
     "TabHookDepth", "TabHookLength", "TabHookRadius", "SwapHookDirection",
+    "Kerf",
 )
 
 
@@ -365,6 +372,7 @@ class LBTabsTaskPanel:
         laserhelper.lbBindQuantitySpinBox(self.form.TabHookDepth, obj, "TabHookDepth")
         laserhelper.lbBindQuantitySpinBox(self.form.TabHookLength, obj, "TabHookLength")
         laserhelper.lbBindQuantitySpinBox(self.form.TabHookRadius, obj, "TabHookRadius")
+        laserhelper.lbBindQuantitySpinBox(self.form.Kerf, obj, "Kerf")
         self.form.TabMode.setCurrentText(obj.TabMode)
         self.form.SwapEnds.setChecked(obj.SwapEnds)
         self.form.SwapHookDirection.setChecked(obj.SwapHookDirection)

@@ -12,6 +12,7 @@ A FreeCAD workbench for designing laser-cut boxes and enclosures. Create paramet
 - **Tabs** — Add parametric finger tabs along edges for joining panels. Supports tab count, width, depth, taper, margins, and optional hook profiles
 - **Slots** — Generate slots along edges to receive tabs from other panels. Configurable slot count, length, depth, and gap width
 - **Living Hinge** — Create flexible hinge patterns (e.g. straight elements) along edges for foldable designs
+- **Kerf compensation** — Tabs, Slots and Basic Box have a **Kerf** parameter (the laser beam width). Tabs are widened and slots narrowed by kerf/2 on each side (centres unchanged, ends on the panel edge are left in place) so joints fit snugly after cutting. Default is 0 (no compensation).
 
 All features work on selected faces and edges of your Part or PartDesign bodies, with optional auto-update when parameters change.
 
