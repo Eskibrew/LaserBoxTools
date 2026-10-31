@@ -288,6 +288,37 @@ def lbApplyKerf(type, p1, p2, kerf, widthDir, edgeMin, edgeMax):
     return _move(p1, -half), _move(p2, half)
 
 
+def lbMiddleGapCount(count):
+    """Gap count used by "From Middle" layout: even counts include both outer gaps, odd counts none."""
+    if count <= 0:
+        return 0
+    return count + 1 if count % 2 == 0 else count - 1
+
+def lbMiddleAutoCount(edgeLength, tabOrSlotWidth, gapWidth):
+    """Largest tab/slot count that fits edgeLength in "From Middle" mode (same rule as an explicit count)."""
+    if tabOrSlotWidth <= 0 and gapWidth <= 0:
+        return 0
+    best = 0
+    n = 1
+    # an even count may not fit while the next odd one does, so test every n the edge could hold
+    while n * tabOrSlotWidth + (n - 1) * gapWidth <= edgeLength + lbEpsilon:
+        if n * tabOrSlotWidth + lbMiddleGapCount(n) * gapWidth <= edgeLength + lbEpsilon:
+            best = n
+        n = n + 1
+    return best
+
+def lbMiddleResolveParams(edgeLength, tabOrSlotCount, tabOrSlotWidth, gapWidth):
+    """Resolve the (count, width, gap) that "From Middle" would use when count is 0 (auto)."""
+    if tabOrSlotCount != 0:
+        return tabOrSlotCount, tabOrSlotWidth, gapWidth
+    if gapWidth == 0 and tabOrSlotWidth == 0:
+        return 10, edgeLength / 21, edgeLength / 21
+    if gapWidth == 0:
+        gapWidth = tabOrSlotWidth
+    elif tabOrSlotWidth == 0:
+        tabOrSlotWidth = gapWidth
+    return lbMiddleAutoCount(edgeLength, tabOrSlotWidth, gapWidth), tabOrSlotWidth, gapWidth
+
 def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, tabOrSlotCount, gapWidth, mode, swapends, tabTaper, margin1, margin2, tabHookDepth, tabHookLength, tabHookRadius, swapHookDirection, kerf = 0.0):
     #create a number of polygons, turn them into faces and return them in a list
     #mode can be "From Middle" (M), "From One End" (E) or "From Both Ends" (B)
@@ -325,15 +356,7 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
         firstValue = edge.valueAt(edge.FirstParameter).z
         lastValue = edge.valueAt(edge.LastParameter).z
 
-    if (taperLength * 2) >= tabOrSlotWidth:
-        # we need to ensure taperLength is possible
-        taperLength = (tabOrSlotWidth / 2) - 0.01
-
-    if swapends:
-        taperLength = -taperLength
-
     edgeLength = edge.Length - margin1 - margin2
-    taperVector = widthDir * taperLength
 
     if mode == "From One End" or mode == "From Both Ends": 
         if gapWidth == 0 and tabOrSlotWidth == 0 and tabOrSlotCount == 0:
@@ -454,20 +477,10 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                 tabOrSlotWidth = (edgeLength - (gapCount * gapWidth)) / tabOrSlotCount
 
         if tabOrSlotCount == 0:
-            tabOrSlotCount = 0
-            gapCount = 0
-            totalLength = 0
-
-            while totalLength <= edgeLength:
-                totalLength = totalLength + tabOrSlotWidth
-
-                if totalLength <= edgeLength:
-                    tabOrSlotCount = tabOrSlotCount + 1
-                    if ((totalLength + gapWidth) <= edgeLength):
-                        totalLength = totalLength + gapWidth
-                        gapCount = gapCount + 1
-                    else:
-                        break
+            # keep the even/odd gap convention used for the centring below, otherwise
+            # an even auto-fitted count is shifted by half a gap
+            tabOrSlotCount = lbMiddleAutoCount(edgeLength, tabOrSlotWidth, gapWidth)
+            gapCount = lbMiddleGapCount(tabOrSlotCount)
 
         #we want to start in the middle with either a tab or a gap
         #find the middle position alnog the face
@@ -491,7 +504,17 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
             p1 = p1 - (gapVector * (gapCount / 2))
             p1 = p1 - gapVector - tabVector
 
-    if margin1 + margin2 + (tabOrSlotWidth * tabOrSlotCount) + (gapWidth * gapCount) > edge.Length:
+    # clamp the taper only once the tab/slot width is known (it may have been 0 = auto above)
+    if taperLength > 0 and (taperLength * 2) >= tabOrSlotWidth:
+        # we need to ensure taperLength is possible
+        taperLength = (tabOrSlotWidth / 2) - 0.01
+
+    if swapends:
+        taperLength = -taperLength
+
+    taperVector = widthDir * taperLength
+
+    if margin1 + margin2 + (tabOrSlotWidth * tabOrSlotCount) + (gapWidth * gapCount) > edge.Length + lbEpsilon:
         label = "Tabs" if type == "Tab" else "Slots"
         lbWarnConsole(
             "{}: Will not fit on the face with the current settings. "
