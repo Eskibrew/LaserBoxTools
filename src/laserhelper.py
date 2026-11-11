@@ -256,7 +256,70 @@ def lbIsOperationLegal(body, selobj):
     return True
 
 
-def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, tabOrSlotCount, gapWidth, mode, swapends, tabTaper, margin1, margin2, tabHookDepth, tabHookLength, tabHookRadius, swapHookDirection):
+def lbApplyKerf(type, p1, p2, kerf, widthDir, edgeMin, edgeMax):
+    """Return (p1, p2) adjusted for laser kerf along the width direction.
+
+    Tabs grow by kerf/2 on each side, slots shrink by kerf/2 on each side, keeping the centre fixed.
+    Points are not pushed beyond the edge extent [edgeMin, edgeMax] (projected on widthDir).
+    """
+    if kerf <= 0:
+        return p1, p2
+    span = p2 - p1
+    if span.Length < lbEpsilon:
+        return p1, p2
+    u = FreeCAD.Vector(span).normalize()
+    half = kerf / 2.0 if type == "Tab" else -kerf / 2.0
+
+    def _move(p, d):
+        t0 = p.dot(widthDir)
+        if abs(t0 - edgeMin) < 1e-6 or abs(t0 - edgeMax) < 1e-6:
+            # end lies on the panel edge: leave it there (no protrusion, no thin sliver)
+            return p
+        q = p + u * d
+        t = q.dot(widthDir)
+        lo = min(edgeMin, t0)
+        hi = max(edgeMax, t0)
+        if t < lo:
+            q = q + widthDir * (lo - t)
+        elif t > hi:
+            q = q - widthDir * (t - hi)
+        return q
+
+    return _move(p1, -half), _move(p2, half)
+
+
+def lbMiddleGapCount(count):
+    """Gap count used by "From Middle" layout: even counts include both outer gaps, odd counts none."""
+    if count <= 0:
+        return 0
+    return count + 1 if count % 2 == 0 else count - 1
+
+def lbMiddleAutoCount(edgeLength, tabOrSlotWidth, gapWidth):
+    """Largest tab/slot count that fits edgeLength in "From Middle" mode (same rule as an explicit count)."""
+    if tabOrSlotWidth <= 0 and gapWidth <= 0:
+        return 0
+    best = 0
+    n = 1
+    # an even count may not fit while the next odd one does, so test every n the edge could hold
+    while n * tabOrSlotWidth + (n - 1) * gapWidth <= edgeLength + lbEpsilon:
+        if n * tabOrSlotWidth + lbMiddleGapCount(n) * gapWidth <= edgeLength + lbEpsilon:
+            best = n
+        n = n + 1
+    return best
+
+def lbMiddleResolveParams(edgeLength, tabOrSlotCount, tabOrSlotWidth, gapWidth):
+    """Resolve the (count, width, gap) that "From Middle" would use when count is 0 (auto)."""
+    if tabOrSlotCount != 0:
+        return tabOrSlotCount, tabOrSlotWidth, gapWidth
+    if gapWidth == 0 and tabOrSlotWidth == 0:
+        return 10, edgeLength / 21, edgeLength / 21
+    if gapWidth == 0:
+        gapWidth = tabOrSlotWidth
+    elif tabOrSlotWidth == 0:
+        tabOrSlotWidth = gapWidth
+    return lbMiddleAutoCount(edgeLength, tabOrSlotWidth, gapWidth), tabOrSlotWidth, gapWidth
+
+def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, tabOrSlotCount, gapWidth, mode, swapends, tabTaper, margin1, margin2, tabHookDepth, tabHookLength, tabHookRadius, swapHookDirection, kerf = 0.0):
     #create a number of polygons, turn them into faces and return them in a list
     #mode can be "From Middle" (M), "From One End" (E) or "From Both Ends" (B)
     #gapWidth works for M and E modes and sets the gap between tabs; it cannot work for B mode.
@@ -293,15 +356,7 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
         firstValue = edge.valueAt(edge.FirstParameter).z
         lastValue = edge.valueAt(edge.LastParameter).z
 
-    if (taperLength * 2) >= tabOrSlotWidth:
-        # we need to ensure taperLength is possible
-        taperLength = (tabOrSlotWidth / 2) - 0.01
-
-    if swapends:
-        taperLength = -taperLength
-
     edgeLength = edge.Length - margin1 - margin2
-    taperVector = widthDir * taperLength
 
     if mode == "From One End" or mode == "From Both Ends": 
         if gapWidth == 0 and tabOrSlotWidth == 0 and tabOrSlotCount == 0:
@@ -422,20 +477,10 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                 tabOrSlotWidth = (edgeLength - (gapCount * gapWidth)) / tabOrSlotCount
 
         if tabOrSlotCount == 0:
-            tabOrSlotCount = 0
-            gapCount = 0
-            totalLength = 0
-
-            while totalLength <= edgeLength:
-                totalLength = totalLength + tabOrSlotWidth
-
-                if totalLength <= edgeLength:
-                    tabOrSlotCount = tabOrSlotCount + 1
-                    if ((totalLength + gapWidth) <= edgeLength):
-                        totalLength = totalLength + gapWidth
-                        gapCount = gapCount + 1
-                    else:
-                        break
+            # keep the even/odd gap convention used for the centring below, otherwise
+            # an even auto-fitted count is shifted by half a gap
+            tabOrSlotCount = lbMiddleAutoCount(edgeLength, tabOrSlotWidth, gapWidth)
+            gapCount = lbMiddleGapCount(tabOrSlotCount)
 
         #we want to start in the middle with either a tab or a gap
         #find the middle position alnog the face
@@ -459,7 +504,17 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
             p1 = p1 - (gapVector * (gapCount / 2))
             p1 = p1 - gapVector - tabVector
 
-    if margin1 + margin2 + (tabOrSlotWidth * tabOrSlotCount) + (gapWidth * gapCount) > edge.Length:
+    # clamp the taper only once the tab/slot width is known (it may have been 0 = auto above)
+    if taperLength > 0 and (taperLength * 2) >= tabOrSlotWidth:
+        # we need to ensure taperLength is possible
+        taperLength = (tabOrSlotWidth / 2) - 0.01
+
+    if swapends:
+        taperLength = -taperLength
+
+    taperVector = widthDir * taperLength
+
+    if margin1 + margin2 + (tabOrSlotWidth * tabOrSlotCount) + (gapWidth * gapCount) > edge.Length + lbEpsilon:
         label = "Tabs" if type == "Tab" else "Slots"
         lbWarnConsole(
             "{}: Will not fit on the face with the current settings. "
@@ -468,6 +523,16 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
         return []
 
     lbClearConsoleWarning()
+
+    # edge extent along widthDir, used to stop kerf compensation pushing tabs past the panel edge
+    edgeStartT = edge.valueAt(edge.FirstParameter).dot(widthDir)
+    edgeEndT = edge.valueAt(edge.LastParameter).dot(widthDir)
+    edgeMin = min(edgeStartT, edgeEndT)
+    edgeMax = max(edgeStartT, edgeEndT)
+
+    if type == "Slot" and kerf > 0 and kerf >= tabOrSlotWidth:
+        lbWarnConsole("Slots: Kerf is not smaller than the slot length; kerf compensation ignored.")
+        kerf = 0.0
 
     numTabs = tabOrSlotCount
 
@@ -485,11 +550,12 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                 p2 = p1 + gapVector + (2 * tabVector) + (tabHookLength * widthDir)
                 p1 = p
 
-        p3 = p2 - taperVector + (depthDir * tabOrSlotDepth)
-        p4 = p1 + taperVector + (depthDir * tabOrSlotDepth)
+        q1, q2 = lbApplyKerf(type, p1, p2, kerf, widthDir, edgeMin, edgeMax)
+        p3 = q2 - taperVector + (depthDir * tabOrSlotDepth)
+        p4 = q1 + taperVector + (depthDir * tabOrSlotDepth)
 
         #now use our vertexes to make a polygon wire
-        w = Part.makePolygon([p1,p2,p3,p4,p1])
+        w = Part.makePolygon([q1,q2,p3,p4,q1])
 
         if (type == "Slot") and (tabHookLength > 0.0) and (swapHookDirection):
             p1 = p1 + (tabHookLength * widthDir)
@@ -580,11 +646,12 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                     p2 = p1 - gapVector - (2 * tabVector)
                     p1 = p
 
-            p3 = p2 + taperVector + (depthDir * tabOrSlotDepth)
-            p4 = p1 - taperVector + (depthDir * tabOrSlotDepth)
+            q1, q2 = lbApplyKerf(type, p1, p2, kerf, widthDir, edgeMin, edgeMax)
+            p3 = q2 + taperVector + (depthDir * tabOrSlotDepth)
+            p4 = q1 - taperVector + (depthDir * tabOrSlotDepth)
 
             #now use our vertexes to make a polygon wire
-            w = Part.makePolygon([p1,p2,p3,p4,p1])
+            w = Part.makePolygon([q1,q2,p3,p4,q1])
 
             if (type == "Slot") and (tabHookLength > 0.0) and (swapHookDirection):
                 p1 = p1 - (tabHookLength * widthDir)
@@ -951,7 +1018,7 @@ def lbMultiCut(baseShape, solidlist, featureLabel=""):
             return baseShape
 
 
-def lbCreateTabs(tabCount, tabWidth, gapWidth, tabDepth, mode, swapends, tabTaper, margin1, margin2, tabHookDepth, tabHookLength, tabHookRadius, swapHookDirection, subtraction = False, refine = True, selFaceNames = '', selObject = ''):
+def lbCreateTabs(tabCount, tabWidth, gapWidth, tabDepth, mode, swapends, tabTaper, margin1, margin2, tabHookDepth, tabHookLength, tabHookRadius, swapHookDirection, subtraction = False, refine = True, selFaceNames = '', selObject = '', kerf = 0.0):
     finalShape = selObject
     solidlist =[]
     
@@ -1012,7 +1079,7 @@ def lbCreateTabs(tabCount, tabWidth, gapWidth, tabDepth, mode, swapends, tabTape
         if tabDepth > 0.0:
             # create tabs on face selected
             # we first create the faces
-            tab_faces = lbMakeFaces("Tab", lengthEdge, depthDir, widthDir, tabWidth, tabDepth, tabCount, gapWidth, mode, swapends, tabTaper, margin1, margin2, tabHookDepth, tabHookLength, tabHookRadius, swapHookDirection)
+            tab_faces = lbMakeFaces("Tab", lengthEdge, depthDir, widthDir, tabWidth, tabDepth, tabCount, gapWidth, mode, swapends, tabTaper, margin1, margin2, tabHookDepth, tabHookLength, tabHookRadius, swapHookDirection, kerf)
 
             for tab_face in tab_faces:
                 # then extrude each face to create a tab
@@ -1031,7 +1098,7 @@ def lbCreateTabs(tabCount, tabWidth, gapWidth, tabDepth, mode, swapends, tabTape
 
     return finalShape
 
-def lbCreateSlots(slotCount, slotLength, gapWidth, slotDepth, mode, swapends, margin1, margin2, offsetFromFace, slotHookLength, swapHookDirection, subtraction = False, refine = True, selFaceNames = '', selObject = ''):
+def lbCreateSlots(slotCount, slotLength, gapWidth, slotDepth, mode, swapends, margin1, margin2, offsetFromFace, slotHookLength, swapHookDirection, subtraction = False, refine = True, selFaceNames = '', selObject = '', kerf = 0.0):
     finalShape = selObject
     solidlist =[]
     
@@ -1102,7 +1169,7 @@ def lbCreateSlots(slotCount, slotLength, gapWidth, slotDepth, mode, swapends, ma
         if slotDepth > 0.0:
             # create slots on face selected
             # we first create the faces
-            slot_faces = lbMakeFaces("Slot", slotEdge, depthDir, LengthDir, slotLength, slotDepth, slotCount, gapWidth, mode, swapends, 0.0, margin1, margin2, slotDepth, slotHookLength, 0.0, swapHookDirection)
+            slot_faces = lbMakeFaces("Slot", slotEdge, depthDir, LengthDir, slotLength, slotDepth, slotCount, gapWidth, mode, swapends, 0.0, margin1, margin2, slotDepth, slotHookLength, 0.0, swapHookDirection, kerf)
 
             for slot_face in slot_faces:
                 # then extrude each face to create a negative slot (much like a tab)

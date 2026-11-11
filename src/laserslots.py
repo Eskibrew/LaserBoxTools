@@ -52,6 +52,8 @@ def LBEnsureSlotHookProperties(obj):
         obj.addProperty("App::PropertyBool", "SwapHookDirection", "Parameters", "Swap Hook Direction").SwapHookDirection = False
     if not hasattr(obj, 'SlotHookLength'):
         obj.addProperty("App::PropertyLength", "SlotHookLength", "Parameters", "Slot Hook Length").SlotHookLength = 0.0
+    if not hasattr(obj, 'Kerf'):
+        obj.addProperty("App::PropertyLength", "Kerf", "Parameters", "Laser kerf (full beam width). Slots are narrowed by kerf/2 on each side to compensate.").Kerf = 0.0
 
 
 class LBGenerateSlots:
@@ -95,6 +97,8 @@ class LBGenerateSlots:
         obj.addProperty("App::PropertyBool","SwapHookDirection","Parameters",_tip_).SwapHookDirection = False
         _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Slot Offset from face")
         obj.addProperty("App::PropertyLength","OffsetFromFace","Parameters",_tip_).OffsetFromFace = 0.0
+        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Laser kerf (full beam width). Slots are narrowed by kerf/2 on each side to compensate.")
+        obj.addProperty("App::PropertyLength","Kerf","Parameters",_tip_).Kerf = 0.0
 
     def getElementMapVersion(self, _fp, ver, _prop, restored):
         #TODO not sure what this is
@@ -112,12 +116,13 @@ class LBGenerateSlots:
                         slotDepth = fp.SlotDepth.Value, mode = fp.SlotMode, swapends = fp.SwapEnds,
                         margin1 = fp.Margin1.Value, margin2 = fp.Margin2.Value, offsetFromFace = fp.OffsetFromFace.Value,
                         slotHookLength = fp.SlotHookLength.Value, swapHookDirection = fp.SwapHookDirection,
-                        subtraction = False, refine = fp.Refine, selFaceNames = face, selObject = Main_Object)
+                        subtraction = False, refine = fp.Refine, selFaceNames = face, selObject = Main_Object,
+                        kerf = fp.Kerf.Value)
         fp.baseObject[0].ViewObject.Visibility = False
         fp.Shape = s
 
 
-def LBCreateSlotsFeature(doc, link_obj, face_names, slot_count, slot_width, slot_depth, gap_width, slot_mode, margin1, margin2, offset_from_face, refine=True, plate_for_name=None):
+def LBCreateSlotsFeature(doc, link_obj, face_names, slot_count, slot_width, slot_depth, gap_width, slot_mode, margin1, margin2, offset_from_face, refine=True, plate_for_name=None, kerf=0.0):
     """Create a parametric Slots feature linked to link_obj (no GUI selection).
 
     link_obj: object for baseObject (PartDesign: Body.Tip — not the Body). plate_for_name: optional
@@ -155,6 +160,7 @@ def LBCreateSlotsFeature(doc, link_obj, face_names, slot_count, slot_width, slot
     a.SlotHookLength = 0.0
     a.SwapHookDirection = False
     a.OffsetFromFace = float(offset_from_face)
+    a.Kerf = float(kerf)
     label_src = plate_for_name if plate_for_name is not None else link_obj
     a.Label = "Slots ({})".format(label_src.Label)
     if pd_body is not None:
@@ -167,7 +173,7 @@ def LBCreateSlotsFeature(doc, link_obj, face_names, slot_count, slot_width, slot
 _LB_SLOTS_AUTOUPDATE_PROPS = (
     "SlotDepth", "SlotLength", "GapWidth", "SlotCount", "Refine", "SlotMode",
     "Margin1", "Margin2", "OffsetFromFace", "baseObject", "SwapEnds",
-    "SlotHookLength", "SwapHookDirection",
+    "SlotHookLength", "SwapHookDirection", "Kerf",
 )
 
 
@@ -343,6 +349,7 @@ class LBSlotsTaskPanel:
         laserhelper.lbBindQuantitySpinBox(self.form.Margin2, obj, "Margin2")
         laserhelper.lbBindQuantitySpinBox(self.form.OffsetFromFace, obj, "OffsetFromFace", self.updateSlotDepthLabel)
         laserhelper.lbBindQuantitySpinBox(self.form.SlotHookLength, obj, "SlotHookLength")
+        laserhelper.lbBindQuantitySpinBox(self.form.Kerf, obj, "Kerf")
         self.form.SlotMode.setCurrentText(obj.SlotMode)
         self.form.SwapEnds.setChecked(obj.SwapEnds)
         self.form.SwapHookDirection.setChecked(obj.SwapHookDirection)

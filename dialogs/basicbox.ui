@@ -298,6 +298,23 @@
         </property>
        </widget>
       </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="labelKerf">
+        <property name="text">
+         <string>Kerf</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="Gui::QuantitySpinBox" name="Kerf">
+        <property name="toolTip">
+         <string>Laser kerf (beam width). Tabs are widened and slots narrowed by kerf/2 on each side.</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
