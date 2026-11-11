@@ -4,7 +4,7 @@ A FreeCAD workbench for designing laser-cut boxes and enclosures. Create paramet
 
 ![Laser Box Tools Workbench](Resources/icons/LBLogo.svg)
 
-**Video tutorial:** [How to use basic features](https://youtu.be/j17BoXwl58k)
+**Video tutorial:** [How to use basic features](https://youtu.be/m_Drmns1SJE)
 
 ## Features
 
