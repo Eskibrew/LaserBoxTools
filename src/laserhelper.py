@@ -509,7 +509,7 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
         # we need to ensure taperLength is possible
         taperLength = (tabOrSlotWidth / 2) - 0.01
 
-    if swapends:
+    if swapends and mode != "From Middle":
         taperLength = -taperLength
 
     taperVector = widthDir * taperLength
