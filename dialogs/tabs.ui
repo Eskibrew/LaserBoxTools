@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>315</width>
-    <height>665</height>
+    <height>697</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,6 +30,19 @@
         </property>
        </widget>
       </item>
+      <item row="11" column="0">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>Margin1</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="Gui::QuantitySpinBox" name="GapWidth"/>
+      </item>
       <item row="5" column="0">
        <widget class="QLabel" name="label_3">
         <property name="text">
@@ -40,40 +53,23 @@
         </property>
        </widget>
       </item>
-      <item row="7" column="0">
-       <widget class="QLabel" name="label_4">
+      <item row="3" column="0">
+       <widget class="QLabel" name="label">
         <property name="text">
-         <string>Gap Width</string>
+         <string>Number of tabs</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
-      <item row="12" column="1">
-       <widget class="Gui::QuantitySpinBox" name="Margin2"/>
+      <item row="11" column="1">
+       <widget class="Gui::QuantitySpinBox" name="Margin1"/>
       </item>
       <item row="6" column="0">
        <widget class="QLabel" name="label_6">
         <property name="text">
          <string>Tab Taper</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="9" column="1">
-       <widget class="QCheckBox" name="SwapEnds">
-        <property name="text">
-         <string>Swap Ends</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Number of tabs</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -90,71 +86,36 @@
         </property>
        </widget>
       </item>
-      <item row="8" column="1">
-       <widget class="QComboBox" name="TabMode">
-        <item>
-         <property name="text">
-          <string>From One End</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>From Both Ends</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>From Middle</string>
-         </property>
-        </item>
-       </widget>
+      <item row="6" column="1">
+       <widget class="Gui::QuantitySpinBox" name="TabTaper"/>
       </item>
-      <item row="11" column="1">
-       <widget class="Gui::QuantitySpinBox" name="Margin1"/>
+      <item row="7" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Gap Width</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
       </item>
       <item row="5" column="1">
        <widget class="Gui::QuantitySpinBox" name="TabDepth"/>
       </item>
-      <item row="7" column="1">
-       <widget class="Gui::QuantitySpinBox" name="GapWidth"/>
-      </item>
-      <item row="6" column="1">
-       <widget class="Gui::QuantitySpinBox" name="TabTaper"/>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="label_2">
+      <item row="9" column="1">
+       <widget class="QCheckBox" name="SwapEnds">
         <property name="text">
-         <string>Tab Width</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <string>Swap Ends</string>
         </property>
        </widget>
+      </item>
+      <item row="12" column="1">
+       <widget class="Gui::QuantitySpinBox" name="Margin2"/>
       </item>
       <item row="4" column="1">
        <widget class="Gui::QuantitySpinBox" name="TabWidth"/>
       </item>
-      <item row="11" column="0">
-       <widget class="QLabel" name="label_7">
-        <property name="text">
-         <string>Margin1</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="12" column="0">
-       <widget class="QLabel" name="label_8">
-        <property name="text">
-         <string>Margin2</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="13" column="0" rowspan="3" colspan="2">
+      <item row="15" column="0" rowspan="3" colspan="2">
        <widget class="QGroupBox" name="TabHooks">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -233,20 +194,59 @@
         </layout>
        </widget>
       </item>
-      <item row="16" column="0">
-       <widget class="QLabel" name="labelKerf">
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>Kerf</string>
+         <string>Tab Width</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
-      <item row="16" column="1">
+      <item row="8" column="1">
+       <widget class="QComboBox" name="TabMode">
+        <item>
+         <property name="text">
+          <string>From One End</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>From Both Ends</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>From Middle</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="12" column="0">
+       <widget class="QLabel" name="label_8">
+        <property name="text">
+         <string>Margin2</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="13" column="1">
        <widget class="Gui::QuantitySpinBox" name="Kerf">
         <property name="toolTip">
          <string>Laser kerf (beam width). Each tab is widened by kerf/2 on each side.</string>
+        </property>
+       </widget>
+      </item>
+      <item row="13" column="0">
+       <widget class="QLabel" name="labelKerf">
+        <property name="text">
+         <string>Kerf</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -323,6 +323,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Gui::QuantitySpinBox</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>Gui/QuantitySpinBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::IntSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>Gui/SpinBox.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>TabCount</tabstop>
   <tabstop>TabWidth</tabstop>
@@ -343,16 +355,4 @@
  </tabstops>
  <resources/>
  <connections/>
- <customwidgets>
-  <customwidget>
-   <class>Gui::QuantitySpinBox</class>
-   <extends>QDoubleSpinBox</extends>
-   <header>Gui/QuantitySpinBox.h</header>
-  </customwidget>
-  <customwidget>
-   <class>Gui::IntSpinBox</class>
-   <extends>QSpinBox</extends>
-   <header>Gui/SpinBox.h</header>
-  </customwidget>
- </customwidgets>
 </ui>

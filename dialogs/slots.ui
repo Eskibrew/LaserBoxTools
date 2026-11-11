@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>315</width>
-    <height>598</height>
+    <height>630</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,13 +20,13 @@
       <string>Slot Details</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="13" column="0" colspan="2">
-       <widget class="QGroupBox" name="SlotExtensionForHooks">
-        <property name="title">
-         <string>Slot extension for hooks (optional)</string>
+      <item row="3" column="1">
+       <widget class="Gui::IntSpinBox" name="SlotCount">
+        <property name="minimum">
+         <number>0</number>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        <property name="maximum">
+         <number>9999</number>
         </property>
        </widget>
       </item>
@@ -35,65 +35,6 @@
       </item>
       <item row="11" column="1">
        <widget class="Gui::QuantitySpinBox" name="Margin2"/>
-      </item>
-      <item row="14" column="0">
-       <widget class="QLabel" name="label_10">
-        <property name="text">
-         <string>Slot Hook Length</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="14" column="1">
-       <widget class="Gui::QuantitySpinBox" name="SlotHookLength"/>
-      </item>
-      <item row="5" column="1">
-       <widget class="Gui::QuantitySpinBox" name="SlotDepth"/>
-      </item>
-      <item row="10" column="1">
-       <widget class="Gui::QuantitySpinBox" name="Margin1"/>
-      </item>
-      <item row="7" column="0">
-       <widget class="QLabel" name="label_4">
-        <property name="text">
-         <string>Gap Width</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>Slot Depth</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Number of slots</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="10" column="0">
-       <widget class="QLabel" name="label_7">
-        <property name="text">
-         <string>Margin1</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
       </item>
       <item row="12" column="0">
        <widget class="QLabel" name="label_9">
@@ -105,10 +46,10 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="label_2">
+      <item row="13" column="0">
+       <widget class="QLabel" name="labelKerf">
         <property name="text">
-         <string>Slot Length</string>
+         <string>Kerf</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -125,18 +66,48 @@
         </property>
        </widget>
       </item>
-      <item row="9" column="1">
-       <widget class="QCheckBox" name="SwapEnds">
+      <item row="3" column="0">
+       <widget class="QLabel" name="label">
         <property name="text">
-         <string>Swap Ends</string>
+         <string>Number of slots</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Slot Depth</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Slot Length</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
       <item row="4" column="1">
        <widget class="Gui::QuantitySpinBox" name="SlotLength"/>
       </item>
-      <item row="12" column="1">
-       <widget class="Gui::QuantitySpinBox" name="OffsetFromFace"/>
+      <item row="10" column="1">
+       <widget class="Gui::QuantitySpinBox" name="Margin1"/>
+      </item>
+      <item row="9" column="1">
+       <widget class="QCheckBox" name="SwapEnds">
+        <property name="text">
+         <string>Swap Ends</string>
+        </property>
+       </widget>
       </item>
       <item row="8" column="1">
        <widget class="QComboBox" name="SlotMode">
@@ -157,13 +128,68 @@
         </item>
        </widget>
       </item>
-      <item row="3" column="1">
-       <widget class="Gui::IntSpinBox" name="SlotCount">
-        <property name="minimum">
-         <number>0</number>
+      <item row="5" column="1">
+       <widget class="Gui::QuantitySpinBox" name="SlotDepth"/>
+      </item>
+      <item row="12" column="1">
+       <widget class="Gui::QuantitySpinBox" name="OffsetFromFace"/>
+      </item>
+      <item row="10" column="0">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>Margin1</string>
         </property>
-        <property name="maximum">
-         <number>9999</number>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="13" column="1">
+       <widget class="Gui::QuantitySpinBox" name="Kerf">
+        <property name="toolTip">
+         <string>Laser kerf (beam width). Each slot is narrowed by kerf/2 on each side.</string>
+        </property>
+       </widget>
+      </item>
+      <item row="14" column="0" rowspan="5" colspan="2">
+       <widget class="QGroupBox" name="SlotExtensionForHooks">
+        <property name="title">
+         <string>Slot extension for hooks (optional)</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_4">
+         <item row="0" column="1">
+          <widget class="Gui::QuantitySpinBox" name="SlotHookLength"/>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_10">
+           <property name="text">
+            <string>Slot Hook Length</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QCheckBox" name="SwapHookDirection">
+           <property name="text">
+            <string>Swap Direction</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Gap Width</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -174,30 +200,6 @@
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="15" column="1">
-       <widget class="QCheckBox" name="SwapHookDirection">
-        <property name="text">
-         <string>Swap Direction</string>
-        </property>
-       </widget>
-      </item>
-      <item row="16" column="0">
-       <widget class="QLabel" name="labelKerf">
-        <property name="text">
-         <string>Kerf</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="16" column="1">
-       <widget class="Gui::QuantitySpinBox" name="Kerf">
-        <property name="toolTip">
-         <string>Laser kerf (beam width). Each slot is narrowed by kerf/2 on each side.</string>
         </property>
        </widget>
       </item>
@@ -274,24 +276,6 @@
    </item>
   </layout>
  </widget>
- <tabstops>
-  <tabstop>SlotCount</tabstop>
-  <tabstop>SlotLength</tabstop>
-  <tabstop>SlotDepth</tabstop>
-  <tabstop>GapWidth</tabstop>
-  <tabstop>SlotMode</tabstop>
-  <tabstop>SwapEnds</tabstop>
-  <tabstop>Margin1</tabstop>
-  <tabstop>Margin2</tabstop>
-  <tabstop>OffsetFromFace</tabstop>
-  <tabstop>SlotHookLength</tabstop>
-  <tabstop>SwapHookDirection</tabstop>
-  <tabstop>pbEditSlotFaces</tabstop>
-  <tabstop>pbUpdateSlotFaces</tabstop>
-  <tabstop>treeWidgetSlotFaces</tabstop>
- </tabstops>
- <resources/>
- <connections/>
  <customwidgets>
   <customwidget>
    <class>Gui::QuantitySpinBox</class>
@@ -304,4 +288,20 @@
    <header>Gui/SpinBox.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>SlotCount</tabstop>
+  <tabstop>SlotLength</tabstop>
+  <tabstop>SlotDepth</tabstop>
+  <tabstop>GapWidth</tabstop>
+  <tabstop>SlotMode</tabstop>
+  <tabstop>SwapEnds</tabstop>
+  <tabstop>Margin1</tabstop>
+  <tabstop>Margin2</tabstop>
+  <tabstop>OffsetFromFace</tabstop>
+  <tabstop>pbEditSlotFaces</tabstop>
+  <tabstop>pbUpdateSlotFaces</tabstop>
+  <tabstop>treeWidgetSlotFaces</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
 </ui>
