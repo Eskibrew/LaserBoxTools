@@ -2,7 +2,9 @@
 
 A FreeCAD workbench for designing laser-cut boxes and enclosures. Create parametric tabs, slots, and living hinges on your 3D models for easy laser cutting and assembly.
 
-![Laser Box Tools Workbench](Resources/icons/LBLogo.svg)
+![Laser Box Tools Icon](Resources/icons/LBLogo.svg)
+
+![Laser Box Tools Screenshot](Screenshot.jpg)
 
 **Video tutorial:** [How to use basic features](https://youtu.be/m_Drmns1SJE)
 
