@@ -36,7 +36,7 @@
     <url type="repository" branch="main">https://github.com/Eskibrew/LaserBoxTools</url>
     <url type="documentation">https://github.com/Eskibrew/LaserBoxTools/tree/main/freecad/laserboxtools/resources/docs/</url>
     <url type="bugtracker">https://github.com/Eskibrew/LaserBoxTools/issues/</url>
-    <url type="readme">https://github.com/Eskibrew/LaserBoxTools/refs/heads/main/freecad/laserboxtools/resources/docs/Overview.md</url>
+    <url type="readme">https://github.com/Eskibrew/LaserBoxTools/tree/main/freecad/laserboxtools/resources/docs/Overview.md</url>
 
     <!--[ Content ]-->
     <content>
