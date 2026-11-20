@@ -20,22 +20,18 @@
 # *                                                                         *
 # ***************************************************************************
 
-from FreeCAD import Gui
-
-import FreeCAD
-#import FreeCADGui
-
-import Part
-#import Sketcher
-import os, math
+import FreeCAD as App
+import Part, math
 from PySide import QtCore, QtGui
-import BOPTools.SplitFeatures
-
-#__dir__ = os.path.dirname(__file__)
-#icons = os.path.join(__dir__, '../Resources/icons')
-#path_to_ui = os.path.join(__dir__, '../dialogs/tabs.ui')
+#import BOPTools.SplitFeatures
 
 lbEpsilon = 0.0000001
+
+
+def laser_show_error_message(msg):
+    diag = QtGui.QMessageBox(QtGui.QMessageBox.Warning, 'Error', msg)
+    diag.setWindowModality(QtCore.Qt.ApplicationModal)
+    diag.exec_()
 
 
 def lbShouldSkipAutoRecompute(fp):
@@ -72,10 +68,56 @@ def lbShouldSkipAutoRecompute(fp):
     return False
 
 
+# Spin-box arrow buttons auto-repeat while Qt still considers the button held.
+# A recompute inside valueChanged blocks the event loop, so the mouse release
+# stays queued and the value keeps stepping. Defer the recompute until the
+# arrows have been idle briefly; each new step restarts this timer.
+_LB_AUTO_RECOMPUTE_DELAY_MS = 200
+_pending_recompute_doc_name = None
+_recompute_timer = None
+
+
+def _runScheduledAutoRecompute():
+    global _pending_recompute_doc_name
+    name = _pending_recompute_doc_name
+    _pending_recompute_doc_name = None
+    if not name:
+        return
+    doc = App.getDocument(name)
+    if doc is None:
+        return
+    try:
+        if getattr(doc, "Restoring", False):
+            return
+        if getattr(doc, "Recomputing", False):
+            _pending_recompute_doc_name = name
+            if _recompute_timer is not None:
+                _recompute_timer.start(_LB_AUTO_RECOMPUTE_DELAY_MS)
+            return
+    except Exception:
+        return
+    doc.recompute()
+
+
+def lbScheduleAutoRecompute(doc):
+    """Recompute doc once the GUI has been idle for a short interval."""
+    global _pending_recompute_doc_name, _recompute_timer
+    if doc is None:
+        return
+    _pending_recompute_doc_name = doc.Name
+    if _recompute_timer is None:
+        _recompute_timer = QtCore.QTimer()
+        _recompute_timer.setSingleShot(True)
+        _recompute_timer.timeout.connect(_runScheduledAutoRecompute)
+    _recompute_timer.start(_LB_AUTO_RECOMPUTE_DELAY_MS)
+
+
 def lbAutoRecomputeOnProperty(fp, prop, watched_props):
     """Recompute the document when AutoUpdate is on and prop is watched.
 
-    Skips during document restore and while a recompute is already running.
+    The recompute is deferred so a spin-box arrow click can finish and see
+    the mouse release before the geometry rebuild starts. Skips during
+    document restore and while a recompute is already running.
     """
     if not hasattr(fp, "AutoUpdate") or not fp.AutoUpdate:
         return
@@ -83,7 +125,7 @@ def lbAutoRecomputeOnProperty(fp, prop, watched_props):
         return
     if lbShouldSkipAutoRecompute(fp):
         return
-    fp.Document.recompute()
+    lbScheduleAutoRecompute(fp.Document)
 
 
 def lbGetThicknessFromFace(selFace, selObject, thicknessDir):
@@ -135,7 +177,7 @@ def lbActivateWorkbench():
     def _do_activate():
         for name in ("LaserBoxToolsWorkbench"):
             try:
-                FreeCADGui.activateWorkbench(name)
+                App.Gui.activateWorkbench(name)
                 return
             except Exception:
                 continue
@@ -160,7 +202,7 @@ def lbWarnConsole(msg):
     if msg == _last_console_warning:
         return
     _last_console_warning = msg
-    FreeCAD.Console.PrintWarning(msg)
+    App.Console.PrintWarning(msg)
 
 
 def lbClearConsoleWarning():
@@ -171,7 +213,7 @@ def lbClearConsoleWarning():
 
 def lbBindQuantitySpinBox(widget, obj, prop, on_changed=None):
     """Bind a Gui::QuantitySpinBox to a document length/quantity property (enables expressions)."""
-    binder = Gui.ExpressionBinding(widget)
+    binder = App.Gui.ExpressionBinding(widget)
     binder.bind(obj, prop)
     widget.blockSignals(True)
     widget.setProperty("value", getattr(obj, prop))
@@ -190,7 +232,7 @@ def lbBindQuantitySpinBox(widget, obj, prop, on_changed=None):
 
 def lbBindIntSpinBox(widget, obj, prop, on_changed=None):
     """Bind a Gui::IntSpinBox to a document integer property (enables expressions)."""
-    binder = Gui.ExpressionBinding(widget)
+    binder = App.Gui.ExpressionBinding(widget)
     binder.bind(obj, prop)
     widget.blockSignals(True)
     widget.setProperty("value", getattr(obj, prop))
@@ -267,7 +309,7 @@ def lbApplyKerf(type, p1, p2, kerf, widthDir, edgeMin, edgeMax):
     span = p2 - p1
     if span.Length < lbEpsilon:
         return p1, p2
-    u = FreeCAD.Vector(span).normalize()
+    u = App.Vector(span).normalize()
     half = kerf / 2.0 if type == "Tab" else -kerf / 2.0
 
     def _move(p, d):
@@ -387,7 +429,7 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
                 tabOrSlotWidth = (edgeLength - (gapCount * gapWidth)) / tabOrSlotCount
 
         if tabOrSlotCount == 0:
-            #FreeCAD.Console.PrintMessage("tabOrSlotCount is zero\n")
+            #App.Console.PrintMessage("tabOrSlotCount is zero\n")
             tabOrSlotCount = 0
             gapCount = 0
             totalLength = 0
@@ -720,20 +762,19 @@ def lbMakeFaces(type, edge, depthDir, widthDir, tabOrSlotWidth, tabOrSlotDepth, 
 
     return faces
 
-
 def lbCreateLivingHingeElements(elementCount, elementVector, elementDepth, lengthDir, spacingVector, elementMode, elementType, Edge1, Edge2, Edge1End2, Edge2End2):
     faces = []
 
     numElements = elementCount
 
     if elementType != "Straight":
-        FreeCAD.Console.PrintWarning("LivingHinge: Element type {} not implemented yet\n".format(elementType))
+        App.Console.PrintWarning("LivingHinge: Element type {} not implemented yet\n".format(elementType))
         return faces
 
     while numElements > 0:
-        #FreeCAD.Console.PrintMessage("Creating face for element num: {}\n".format(numElements))
+        #App.Console.PrintMessage("Creating face for element num: {}\n".format(numElements))
         if (numElements % 2 == 0):
-            #FreeCAD.Console.PrintMessage("Creating face for even element num: {}\n".format(numElements))
+            #App.Console.PrintMessage("Creating face for even element num: {}\n".format(numElements))
             p1 = Edge1
             p2 = Edge1 + elementVector
             p3 = p2 + (lengthDir * elementDepth)
@@ -741,7 +782,7 @@ def lbCreateLivingHingeElements(elementCount, elementVector, elementDepth, lengt
             Edge1 = Edge1 + spacingVector + elementVector
             Edge2 = Edge2 + spacingVector + elementVector
         else:
-            #FreeCAD.Console.PrintMessage("Creating face for odd element num: {}\n".format(numElements))
+            #App.Console.PrintMessage("Creating face for odd element num: {}\n".format(numElements))
             p1 = Edge2
             p2 = Edge2 + elementVector
             p3 = p2 + (-lengthDir * elementDepth)
@@ -753,7 +794,7 @@ def lbCreateLivingHingeElements(elementCount, elementVector, elementDepth, lengt
         w = Part.makePolygon([p1,p2,p3,p4,p1])
 
         #use the resulting wire to make a face
-        #FreeCAD.Console.PrintMessage("Creating face p1: {}, p2: {}, p3: {}, p4: {}\n".format(p1, p2, p3, p4))
+        #App.Console.PrintMessage("Creating face p1: {}, p2: {}, p3: {}, p4: {}\n".format(p1, p2, p3, p4))
         face = Part.Face(w)
         faces.append(face)
         #Part.show(face)
@@ -784,7 +825,7 @@ def lbCreateLivingHingeElements(elementCount, elementVector, elementDepth, lengt
             w = Part.makePolygon([p1,p2,p3,p4,p1])
 
             #use the resulting wire to make a face
-            #FreeCAD.Console.PrintMessage("Creating face FBE, p1: {}, p2: {}, p3: {}, p4: {}\n".format(p1, p2, p3, p4))
+            #App.Console.PrintMessage("Creating face FBE, p1: {}, p2: {}, p3: {}, p4: {}\n".format(p1, p2, p3, p4))
             face = Part.Face(w)
             faces.append(face)
             #Part.show(face)
@@ -853,7 +894,7 @@ def lbMakeElementFaces(edge1, edge2, lengthDir, widthDir, elementCount, elementW
                         break
 
         #we want to start at one end or the other end with a gap and then the first element
-        if swapends:
+        if swapends and elementMode == "From One End":
             elementVector = widthDir * -elementWidth
             spacingVector = widthDir * -elementSpacing
             margin1Vector = widthDir * -margin1
@@ -861,13 +902,13 @@ def lbMakeElementFaces(edge1, edge2, lengthDir, widthDir, elementCount, elementW
 
             if lastValue > firstValue:
                 #checked
-                #FreeCAD.Console.PrintMessage("OK - Swapped but Last Value > First Value\n")
+                #App.Console.PrintMessage("OK - Swapped but Last Value > First Value\n")
                 Edge1 = edge1.valueAt(edge1.LastParameter) + spacingVector + margin2Vector
                 Edge1End2 = edge1.valueAt(edge1.FirstParameter) + spacingVector + margin1Vector
                 Edge2 = edge2.valueAt(edge2.LastParameter) + spacingVector + margin2Vector
                 Edge2End2 = edge2.valueAt(edge2.FirstParameter) + spacingVector + margin1Vector
             else:
-                #FreeCAD.Console.PrintMessage("Swapped but Last Value < First Value\n")
+                #App.Console.PrintMessage("Swapped but Last Value < First Value\n")
                 Edge1 = edge1.valueAt(edge1.FirstParameter) + spacingVector + margin1Vector
                 Edge1End2 = edge1.valueAt(edge1.LastParameter) - spacingVector - margin2Vector
                 Edge2 = edge2.valueAt(edge2.FirstParameter) + spacingVector + margin1Vector
@@ -879,14 +920,14 @@ def lbMakeElementFaces(edge1, edge2, lengthDir, widthDir, elementCount, elementW
             margin2Vector = widthDir * margin2
 
             if lastValue < firstValue:
-                #FreeCAD.Console.PrintMessage("Not swapped but Last Value > First Value\n")
+                #App.Console.PrintMessage("Not swapped but Last Value > First Value\n")
                 Edge1 = edge1.valueAt(edge1.LastParameter) + spacingVector + margin1Vector
                 Edge1End2 = edge1.valueAt(edge1.FirstParameter) + spacingVector + margin2Vector
                 Edge2 = edge2.valueAt(edge2.LastParameter) + spacingVector + margin1Vector
                 Edge2End2 = edge2.valueAt(edge2.FirstParameter) + spacingVector + margin2Vector
             else:
                 #checked
-                #FreeCAD.Console.PrintMessage("OK - Not swapped but Last Value < First Value\n")
+                #App.Console.PrintMessage("OK - Not swapped but Last Value < First Value\n")
                 Edge1 = edge1.valueAt(edge1.FirstParameter) + spacingVector + margin1Vector
                 Edge1End2 = edge1.valueAt(edge1.LastParameter) - spacingVector - margin2Vector
                 Edge2 = edge2.valueAt(edge2.FirstParameter) + spacingVector + margin1Vector
@@ -1002,7 +1043,7 @@ def lbMultiCut(baseShape, solidlist, featureLabel=""):
             cutResult = baseShape.cut(tuple(solidlist))
         if cutResult.isNull() or not cutResult.isValid():
             if featureLabel:
-                FreeCAD.Console.PrintWarning("{}: Cut produced invalid result\n".format(featureLabel))
+                App.Console.PrintWarning("{}: Cut produced invalid result\n".format(featureLabel))
             return baseShape
         return cutResult
     except Exception:
@@ -1014,7 +1055,7 @@ def lbMultiCut(baseShape, solidlist, featureLabel=""):
             return cutResult
         except Exception as e2:
             if featureLabel:
-                FreeCAD.Console.PrintWarning("{}: Cut failed: {}\n".format(featureLabel, str(e2)))
+                App.Console.PrintWarning("{}: Cut failed: {}\n".format(featureLabel, str(e2)))
             return baseShape
 
 
@@ -1024,14 +1065,14 @@ def lbCreateTabs(tabCount, tabWidth, gapWidth, tabDepth, mode, swapends, tabTape
     
     selFaceNames = lbGetValidFaceNames(selFaceNames)
     if not selFaceNames:
-        FreeCAD.Console.PrintWarning("Tabs: No valid face references - base object may need to be re-selected. (Topological naming can break after boolean operations.)\n")
+        App.Console.PrintWarning("Tabs: No valid face references - base object may need to be re-selected. (Topological naming can break after boolean operations.)\n")
         return finalShape
 
     for selFaceName in selFaceNames:
         try:
             selFace = selObject.getElement(selFaceName)
         except (ValueError, RuntimeError) as e:
-            FreeCAD.Console.PrintWarning("Tabs: Skipping invalid face '{}': {}\n".format(selFaceName, str(e)))
+            App.Console.PrintWarning("Tabs: Skipping invalid face '{}': {}\n".format(selFaceName, str(e)))
             continue
 
         # find the narrow edge
@@ -1104,14 +1145,14 @@ def lbCreateSlots(slotCount, slotLength, gapWidth, slotDepth, mode, swapends, ma
     
     selFaceNames = lbGetValidFaceNames(selFaceNames)
     if not selFaceNames:
-        FreeCAD.Console.PrintWarning("Slots: No valid face references - base object may need to be re-selected. (Topological naming can break after boolean operations.)\n")
+        App.Console.PrintWarning("Slots: No valid face references - base object may need to be re-selected. (Topological naming can break after boolean operations.)\n")
         return finalShape
 
     for selFaceName in selFaceNames:
         try:
             selFace = selObject.getElement(selFaceName)
         except (ValueError, RuntimeError) as e:
-            FreeCAD.Console.PrintWarning("Slots: Skipping invalid face '{}': {}\n".format(selFaceName, str(e)))
+            App.Console.PrintWarning("Slots: Skipping invalid face '{}': {}\n".format(selFaceName, str(e)))
             continue
 
         # find the narrow edge
@@ -1161,7 +1202,7 @@ def lbCreateSlots(slotCount, slotLength, gapWidth, slotDepth, mode, swapends, ma
             p2 = lengthEdge.valueAt(lengthEdge.LastParameter)
             # offset in direction of face normal (depthDir points into solid)
             # use copy - multiply() modifies in place and would corrupt depthDir for lbMakeFaces
-            offsetVec = FreeCAD.Vector(depthDir).multiply(offsetFromFace)
+            offsetVec = App.Vector(depthDir).multiply(offsetFromFace)
             slotEdge = Part.makeLine(p1.add(offsetVec), p2.add(offsetVec))
 
         slot_faces = []
@@ -1191,19 +1232,19 @@ def lbCreateLivingHinge(elementCount, elementWidth, elementDepth, elementSpacing
     
     #we have not implemented the elementType yet
     if elementType != "Straight":
-        FreeCAD.Console.PrintWarning("LivingHinge: Element type not implemented yet\n")
+        App.Console.PrintWarning("LivingHinge: Element type not implemented yet\n")
         return finalShape
 
     selFaceNames = lbGetValidFaceNames(selFaceNames)
     if not selFaceNames:
-        FreeCAD.Console.PrintWarning("LivingHinge: No valid face references - base object may need to be re-selected. (Topological naming can break after boolean operations.)\n")
+        App.Console.PrintWarning("LivingHinge: No valid face references - base object may need to be re-selected. (Topological naming can break after boolean operations.)\n")
         return finalShape
 
     for selFaceName in selFaceNames:
         try:
             selFace = selObject.getElement(selFaceName)
         except (ValueError, RuntimeError) as e:
-            FreeCAD.Console.PrintWarning("LivingHinge: Skipping invalid face '{}': {}\n".format(selFaceName, str(e)))
+            App.Console.PrintWarning("LivingHinge: Skipping invalid face '{}': {}\n".format(selFaceName, str(e)))
             continue
 
         # find the narrow edge (shortest) and length edges (longest pair)
@@ -1216,7 +1257,7 @@ def lbCreateLivingHinge(elementCount, elementWidth, elementDepth, elementSpacing
                 lengthEdge1 = edge
 
         if lengthEdge1 is None:
-            FreeCAD.Console.PrintWarning("LivingHinge: Face has no edges\n")
+            App.Console.PrintWarning("LivingHinge: Face has no edges\n")
             return finalShape
 
         # find lengthEdge2: another edge parallel to lengthEdge1 (the other long edge)
@@ -1229,7 +1270,7 @@ def lbCreateLivingHinge(elementCount, elementWidth, elementDepth, elementSpacing
                 break
 
         if lengthEdge2 is None:
-            FreeCAD.Console.PrintWarning("LivingHinge: No parallel length edge found on face\n")
+            App.Console.PrintWarning("LivingHinge: No parallel length edge found on face\n")
             return finalShape
 
 
@@ -1253,18 +1294,18 @@ def lbCreateLivingHinge(elementCount, elementWidth, elementDepth, elementSpacing
 
         # compute thickness: distance from selected face to opposite face in normal direction
         thickness = lbGetThicknessFromFace(selFace, selObject, thicknessDir)
-        #FreeCAD.Console.PrintMessage("LivingHinge: Thickness: {}\n".format(thickness))
+        #App.Console.PrintMessage("LivingHinge: Thickness: {}\n".format(thickness))
         if thickness is None or thickness <= 0:
-            FreeCAD.Console.PrintWarning("LivingHinge: Could not determine thickness, using 10mm\n")
+            App.Console.PrintWarning("LivingHinge: Could not determine thickness, using 10mm\n")
             thickness = 10.0
 
         # vector perpendicular to lengthDir (in plane of face) - cross with ref least parallel to avoid singularity
         if abs(thicknessDir.z) < 0.9:
-            lengthDir = thicknessDir.cross(FreeCAD.Vector(0, 0, 1)).normalize()
+            lengthDir = thicknessDir.cross(App.Vector(0, 0, 1)).normalize()
         else:
-            lengthDir = thicknessDir.cross(FreeCAD.Vector(1, 0, 0)).normalize()
+            lengthDir = thicknessDir.cross(App.Vector(1, 0, 0)).normalize()
 
-        widthDir = thicknessDir.cross(FreeCAD.Vector(0, 1, 0)).normalize()
+        widthDir = thicknessDir.cross(App.Vector(0, 1, 0)).normalize()
         element_faces = []
 
         if elementDepth == 0.0:
@@ -1280,7 +1321,7 @@ def lbCreateLivingHinge(elementCount, elementWidth, elementDepth, elementSpacing
         for element_face in element_faces:
             elementSolid = element_face.extrude(-thicknessDir * thickness)
             if elementSolid.isNull() or not elementSolid.isValid():
-                FreeCAD.Console.PrintWarning("LivingHinge: Extrusion produced invalid solid, skipping\n")
+                App.Console.PrintWarning("LivingHinge: Extrusion produced invalid solid, skipping\n")
                 continue
             # add the element to the list of solids
             solidlist.append(elementSolid)

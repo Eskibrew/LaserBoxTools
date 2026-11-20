@@ -20,442 +20,74 @@
 # *                                                                         *
 # ***************************************************************************
 
-## Problems
-###1) Prevent hinges on a curved surface (or make them work)
-###2) Add different hinge styles - see here https://obrary.com/products/living-hinge-patterns
-
-from FreeCAD import Gui
-import FreeCAD
-import FreeCADGui
-import Part
-#import Sketcher
-import os
-from PySide import QtCore, QtGui
-
-import src.laserhelper as laserhelper
-
-import FreeCAD, FreeCADGui, Part, os, math
 import FreeCAD as App
-import sys
-freecadpython = sys.executable.replace('freecad', 'python')
-App.Console.PrintMessage('Using ' + freecadpython +'\n')
+_wrn = App.Console.PrintWarning
 
-__dir__ = os.path.dirname(__file__)
-icons = os.path.join(__dir__, '../Resources/icons')
-path_to_ui = os.path.join(__dir__, '../dialogs/hinge.ui')
+#we have restructured the workbench to the new proxy class structure, so when opening files from older versions we need to migrate the properties to the new class
 
-
-def LBEnsureLivingHingeProperties(obj):
-    """Add LivingHinge* properties if missing (backward compatibility for older saved objects)."""
-    if not hasattr(obj, 'SwapEnds'):
-        obj.addProperty("App::PropertyBool", "SwapEnds", "Parameters", "Swap Ends").SwapEnds = False
-    if not hasattr(obj, 'ElementType'):
-        obj.addProperty("App::PropertyEnumeration", "ElementType", "Parameters", "What shape are the hinge elements").ElementType = ["Straight"]
-
+def _install_living_hinge_view_provider(vobj, kind):
+    from freecad.laserboxtools.features.living_hinge_feature_vp import (
+        LBLivingHingeViewProviderFlat,
+        LBLivingHingeViewProviderTree,
+    )
+    if kind == "Tree":
+        LBLivingHingeViewProviderTree(vobj)
+    else:
+        LBLivingHingeViewProviderFlat(vobj)
 
 class LBGenerateLivingHinge:
-    def __init__(self, obj):
-        '''"Generate Tabs" '''
-        obj.Proxy = self
-        selobj = Gui.Selection.getSelectionEx()[0]
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Auto Update")
-        obj.addProperty("App::PropertyBool","AutoUpdate","ParametersExt",_tip_).AutoUpdate = False
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Element Count")
-        obj.addProperty("App::PropertyInteger","ElementCount","Parameters",_tip_).ElementCount = 4
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Element Width")
-        obj.addProperty("App::PropertyLength","ElementWidth","Parameters",_tip_).ElementWidth = 0.1
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Element Depth")
-        obj.addProperty("App::PropertyLength","ElementDepth","Parameters",_tip_).ElementDepth = 0.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Element Spacing")
-        obj.addProperty("App::PropertyLength","ElementSpacing","Parameters",_tip_).ElementSpacing = 1.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Base Object")
-        obj.addProperty("App::PropertyLinkSub", "baseObject", "Parameters",_tip_).baseObject = (selobj.Object, selobj.SubElementNames)
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Use Refine (slower but cleaner result)")
-        obj.addProperty("App::PropertyBool","Refine","ParametersExt",_tip_).Refine = False
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Where to start hinge elements")
-        obj.addProperty("App::PropertyEnumeration", "ElementMode", "Parameters", _tip_).ElementMode = ["From One End", "From Both Ends", "From Middle"]
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Swap Ends")
-        obj.addProperty("App::PropertyBool","SwapEnds","Parameters",_tip_).SwapEnds = False
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Margin1")
-        obj.addProperty("App::PropertyLength","Margin1","Parameters",_tip_).Margin1 = 0.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Margin2")
-        obj.addProperty("App::PropertyLength","Margin2","Parameters",_tip_).Margin2 = 0.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","What shape are the hinge elements")
-        obj.addProperty("App::PropertyEnumeration", "ElementType", "Parameters", _tip_).ElementType = ["Straight"]
+    def onDocumentRestored(self, obj):
 
-    def getElementMapVersion(self, _fp, ver, _prop, restored):
-        #TODO not sure what this is
-        if not restored:
-            return "lb0.1.0"
+        if not hasattr(obj, 'AutoUpdate'):
+            obj.addProperty("App::PropertyBool","AutoUpdate","ParametersExt", "Auto Update").AutoUpdate = False
 
-    def execute(self, fp):
-        '''"Print a short message when doing a recomputation, this method is mandatory" '''
-        LBEnsureLivingHingeProperties(fp)
-        # pass selected object shape
-        Main_Object = fp.baseObject[0].Shape.copy()
-        face = fp.baseObject[1]
+        if not hasattr(obj, 'ElementCount'):
+            obj.addProperty("App::PropertyInteger","ElementCount","Parameters", "Element Count").ElementCount = 4
 
-        s = laserhelper.lbCreateLivingHinge(elementCount = fp.ElementCount, elementWidth = fp.ElementWidth.Value, elementDepth = fp.ElementDepth.Value, elementSpacing = fp.ElementSpacing.Value, elementMode = fp.ElementMode, elementType = fp.ElementType, swapends = fp.SwapEnds, margin1 = fp.Margin1.Value, margin2 = fp.Margin2.Value, subtraction = False, refine = fp.Refine, selFaceNames = face, selObject = Main_Object)
-        fp.baseObject[0].ViewObject.Visibility = False
-        fp.Shape = s
+        if not hasattr(obj, 'ElementWidth'):
+            obj.addProperty("App::PropertyLength","ElementWidth","Parameters", "Element Width").ElementWidth = 0.1
 
+        if not hasattr(obj, 'ElementDepth'):
+            obj.addProperty("App::PropertyLength","ElementDepth","Parameters", "Element Depth").ElementDepth = 0.0
 
-_LB_HINGE_AUTOUPDATE_PROPS = (
-    "ElementDepth", "ElementWidth", "ElementCount", "ElementSpacing", "Refine",
-    "ElementMode", "ElementType", "Margin1", "Margin2", "baseObject", "SwapEnds",
-)
+        if not hasattr(obj, 'ElementSpacing'):
+            obj.addProperty("App::PropertyLength","ElementSpacing","Parameters", "Element Spacing").ElementSpacing = 1.0
 
+        if not hasattr(obj, 'Refine'):
+            obj.addProperty("App::PropertyBool","Refine","ParametersExt", "Use Refine (slower but cleaner result)").Refine = False
+
+        if not hasattr(obj, 'ElementMode'):
+            obj.addProperty("App::PropertyEnumeration", "ElementMode", "Parameters", "Where to start hinge elements").ElementMode = ["From One End", "From Both Ends", "From Middle"]
+
+        if not hasattr(obj, 'SwapEnds'):
+            obj.addProperty("App::PropertyBool","SwapEnds","Parameters", "Swap Ends").SwapEnds = False
+
+        if not hasattr(obj, 'Margin1'):
+            obj.addProperty("App::PropertyLength","Margin1","Parameters", "Margin1").Margin1 = 0.0
+
+        if not hasattr(obj, 'Margin2'):
+            obj.addProperty("App::PropertyLength","Margin2","Parameters", "Margin2").Margin2 = 0.0
+
+        if not hasattr(obj, 'ElementType'):
+            obj.addProperty("App::PropertyEnumeration", "ElementType", "Parameters", "What shape are the hinge elements").ElementType = ["Straight"]
+
+        # We don't need to remove any properties
+
+        # src.laserlivinghinge is a top-level module, so a relative import cannot see freecad/.
+        from freecad.laserboxtools.features.living_hinge_feature_object import LBGenerateLivingHinge as LBGenerateLivingHingeNew
+
+        LBGenerateLivingHingeNew(obj)
+        _wrn("New proxy class used; properties migrated\n")
+
+        if App.GuiUp and getattr(obj, "ViewObject", None) is not None:
+            # PartDesign features were given the flat provider; Part features the tree provider.
+            kind = "Flat" if obj.isDerivedFrom("PartDesign::Feature") else "Tree"
+            _install_living_hinge_view_provider(obj.ViewObject, kind)
 
 class LBLivingHingeViewProviderTree:
-    "A View provider that nests children objects under the created one, like Part"
-
-    def __init__(self, vobj):
-        vobj.Proxy = self
-        self.Object = vobj.Object
-
     def attach(self, vobj):
-        self.Object = vobj.Object
-        return
-
-    def setupContextMenu(self, viewObject, menu):
-        action = menu.addAction(FreeCAD.Qt.translate("QObject", "Edit %1").replace("%1", viewObject.Object.Label))
-        action.triggered.connect(lambda: self.startDefaultEditMode(viewObject))
-        return False
-
-    def startDefaultEditMode(self, viewObject):
-        document = viewObject.Document.Document
-        if not document.HasPendingTransaction:
-            text = FreeCAD.Qt.translate("QObject", "Edit %1").replace("%1", viewObject.Object.Label)
-            document.openTransaction(text)
-        viewObject.Document.setEdit(viewObject.Object, 0)
-
-    def updateData(self, fp, prop):
-        '''If a property of the handled feature has changed we have the chance to handle this here'''
-        laserhelper.lbAutoRecomputeOnProperty(fp, prop, _LB_HINGE_AUTOUPDATE_PROPS)
-        return
-
-    def getDisplayModes(self, vobj):
-        modes=[]
-        return modes
-
-    def setDisplayMode(self,mode):
-        return mode
-
-    def __getstate__(self):
-        return None
-
-    def __setstate__(self,state):
-        if state is not None:
-            doc = FreeCAD.ActiveDocument
-            self.Object = doc.getObject(state['ObjectName'])
-
-    def claimChildren(self):
-        objs = []
-        if hasattr(self.Object,"baseObject"):
-            objs.append(self.Object.baseObject[0])
-        if hasattr(self.Object,"Sketch"):
-            objs.append(self.Object.Sketch)
-        return objs
-    
-    def getIcon(self):
-        return os.path.join(icons, 'livinghinge.svg')
-
-    def setEdit(self, vobj, mode):
-        if (mode != 0):
-            return False #we only handle the detault mode
-
-        laserhelper.lbActivateWorkbench()
-        LBEnsureLivingHingeProperties(vobj.Object)
-        taskd = LBLivingHingeTaskPanel(True)
-        taskd.obj = vobj.Object
-        self.Object.AutoUpdate = False
-        taskd.update()
-        self.Object.AutoUpdate = True
-        taskd.updateElementModeSwapEndsState()
-        FreeCADGui.Control.showDialog(taskd)
-        return True
-
-    def unsetEdit(self, vobj, mode):
-        if (mode != 0):
-            return False #we only handle the detault mode
-            
-        FreeCADGui.Control.closeDialog()
-        return False
-
+        _install_living_hinge_view_provider(vobj, "Tree")
 
 class LBLivingHingeViewProviderFlat:
-    "A View provider that places objects flat under base object, like PartDesign"
-
-    def __init__(self, obj):
-        obj.Proxy = self
-        self.Object = obj.Object
-
-    def attach(self, obj):
-        self.Object = obj.Object
-        return
-
-    def updateData(self, fp, prop):
-        '''If a property of the handled feature has changed we have the chance to handle this here'''
-        laserhelper.lbAutoRecomputeOnProperty(fp, prop, _LB_HINGE_AUTOUPDATE_PROPS)
-        return
-
-    def getDisplayModes(self,obj):
-        modes=[]
-        return modes
-
-    def setDisplayMode(self,mode):
-        return mode
-
-    def __getstate__(self):
-        return None
-
-    def __setstate__(self,state):
-        if state is not None:
-            doc = FreeCAD.ActiveDocument
-            self.Object = doc.getObject(state['ObjectName'])
-
-    def claimChildren(self):
-        objs = []
-        if hasattr(self.Object,"Sketch"):
-            objs.append(self.Object.Sketch)
-        return objs
-    
-    def getIcon(self):
-        return os.path.join(icons, 'tabs.svg')
-
-    def setEdit(self,vobj,mode):
-        if (mode != 0):
-            return False #we only handle the detault mode
-
-        laserhelper.lbActivateWorkbench()
-        LBEnsureLivingHingeProperties(vobj.Object)
-        taskd = LBLivingHingeTaskPanel(True)
-        taskd.obj = vobj.Object
-        self.Object.AutoUpdate = False
-        taskd.update()
-        self.Object.AutoUpdate = True
-        taskd.updateElementModeSwapEndsState()
-        FreeCADGui.Control.showDialog(taskd)
-        return True
-
-    def unsetEdit(self,vobj,mode):
-        if (mode != 0):
-            return False #we only handle the detault mode
-            
-        FreeCADGui.Control.closeDialog()
-        return False
-
-
-class LBLivingHingeTaskPanel:
-    def __init__(self, editing):
-        self.editing = editing
-        self.obj = None
-        self._expressionBound = False
-        # this will create a Qt widget from our ui file
-        self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
-        QtCore.QObject.connect(self.form.pbUpdateElementFaces, QtCore.SIGNAL("clicked()"), self.updateElementFaces)
-        QtCore.QObject.connect(self.form.pbEditElementFaces, QtCore.SIGNAL("clicked()"), self.editElementFaces)
-        self.form.ElementMode.setCurrentIndex(0)
-        self.form.ElementType.setCurrentIndex(0)
-        self.form.SwapEnds.setChecked(False)
-        self.form.ElementCount.valueChanged.connect(self.onElementCountChanged)
-        self.form.ElementMode.currentTextChanged.connect(self.onElementModeChanged)
-        self.form.ElementType.currentTextChanged.connect(self.onElementTypeChanged)
-        self.form.SwapEnds.stateChanged.connect(self.onSwapEndsChanged)
-        self.update()
-
-    def bindExpressions(self):
-        if self._expressionBound or not self.obj:
-            return
-        obj = self.obj
-        laserhelper.lbBindIntSpinBox(self.form.ElementCount, obj, "ElementCount")
-        laserhelper.lbBindQuantitySpinBox(self.form.ElementWidth, obj, "ElementWidth")
-        laserhelper.lbBindQuantitySpinBox(self.form.ElementDepth, obj, "ElementDepth")
-        laserhelper.lbBindQuantitySpinBox(self.form.ElementSpacing, obj, "ElementSpacing")
-        laserhelper.lbBindQuantitySpinBox(self.form.Margin1, obj, "Margin1")
-        laserhelper.lbBindQuantitySpinBox(self.form.Margin2, obj, "Margin2")
-        self.form.ElementMode.setCurrentText(obj.ElementMode)
-        self.form.ElementType.setCurrentText(obj.ElementType)
-        self.form.SwapEnds.setChecked(obj.SwapEnds)
-        self._expressionBound = True
-        self.updateElementModeSwapEndsState()
-
-    def updateElementModeSwapEndsState(self):
-        """Disable ElementMode and SwapEnds when ElementCount is 0."""
-        count = self.form.ElementCount.property("value") if self._expressionBound else self.form.ElementCount.value()
-        enabled = count != 0
-        self.form.ElementMode.setEnabled(enabled)
-        self.form.SwapEnds.setEnabled(enabled and self.form.ElementMode.currentText() == "From One End")
-
-    def onElementCountChanged(self, val):
-        self.updateElementModeSwapEndsState()
-        if self.obj and self.obj.ElementMode == "From Both Ends":
-            if val % 2 != 0:
-                if self.obj.ElementCount > val:
-                    val = val - 1
-                else:
-                    val = val + 1
-                self.form.ElementCount.setProperty("value", val)
-
-    def onElementModeChanged(self, val):
-        if self.obj:
-            self.obj.ElementMode = val
-        self.updateElementModeSwapEndsState()
-
-        if self.obj and val == "From Both Ends":
-            if self.obj.ElementCount % 2 != 0:
-                self.form.ElementCount.setProperty("value", self.obj.ElementCount + 1)
-
-    def onElementTypeChanged(self, val):
-        if self.obj:
-            self.obj.ElementType = val
-
-    def onSwapEndsChanged(self, val):
-        self.obj.SwapEnds = val
-
-    def update(self):
-        if self.obj:
-            self.bindExpressions()
-        'fills the treeWidgetElementFaces'
-        self.form.treeWidgetElementFaces.clear()
-        if self.obj:
-            f = self.obj.baseObject
-            if isinstance(f[1], list):
-                for subf in f[1]:
-                    item = QtGui.QTreeWidgetItem(self.form.treeWidgetElementFaces)
-                    item.setText(0, f[0].Name)
-                    item.setIcon(0, QtGui.QIcon(":/icons/Tree_Part.svg"))
-                    item.setText(1, subf)
-            else:
-                item = QtGui.QTreeWidgetItem(self.form.treeWidgetElementFaces)
-                item.setText(0, f[0].Name)
-                item.setIcon(0, QtGui.QIcon(":/icons/Tree_Part.svg"))
-                item.setText(1, f[1][0])
-        self.retranslateUi(self.form)
-
-    def editElementFaces(self):
-        print(f"edit Element faces")  
-        self.obj.baseObject[0].ViewObject.Visibility = True
-        self.obj.ViewObject.Visibility = False
-        self.form.pbEditElementFaces.setEnabled(False)
-        self.form.pbUpdateElementFaces.setEnabled(True)
-        self.form.treeWidgetElementFaces.setEnabled(True)
-        self.copyBaseObject = self.obj.baseObject
-
-    def updateElementFaces(self):
-        self.form.pbEditElementFaces.setEnabled(True)
-        self.form.pbUpdateElementFaces.setEnabled(False)
-        self.form.treeWidgetElementFaces.setEnabled(False)
-        print(f"update Element faces")  
-        if self.obj:
-            if len(FreeCADGui.Selection.getSelectionEx()) < 1:
-                laserhelper.lbErrorMessage("Error: Invalid selection")
-            else:
-                sel = FreeCADGui.Selection.getSelectionEx()[0]
-                if sel.HasSubObjects:
-                    obj = sel.Object
-                    for elt in sel.SubElementNames:
-                        if "Face" in elt:
-                            face = self.obj.baseObject
-                            found = False
-                            if (face[0] == obj.Name):
-                                if isinstance(face[1], tuple):
-                                    for subf in face[1]:
-                                        if subf == elt:
-                                            found = True
-                                else:
-                                    if (face[1][0] == elt):
-                                        found = True
-
-                            if not found:
-                                    self.obj.baseObject = (sel.Object, sel.SubElementNames)
-                self.update()
-        self.obj.baseObject[0].ViewObject.Visibility = False
-        self.obj.ViewObject.Visibility = True
-
-    def accept(self):
-        FreeCAD.ActiveDocument.recompute()
-        FreeCAD.ActiveDocument.commitTransaction()
-        FreeCADGui.Control.closeDialog()
-        FreeCADGui.ActiveDocument.resetEdit()
-        return True
-
-    def reject(self):
-        if not self.editing:  # creating: abort transaction to undo creation
-            self.obj.baseObject[0].ViewObject.Visibility = True
-            self.obj.ViewObject.Visibility = False
-        if FreeCAD.ActiveDocument.HasPendingTransaction:
-            FreeCAD.ActiveDocument.abortTransaction()
-        FreeCAD.ActiveDocument.recompute()
-        FreeCADGui.Control.closeDialog()
-
-    def retranslateUi(self, TaskPanel):
-        self.form.pbUpdateElementFaces.setText(QtGui.QApplication.translate("draft", "Update", None))
-
-
-'''My Command Class'''
-class LBLivingHinge:
-
-    '''My new command'''
-    def __init__(self):
-        return
-
-    '''Return the resources for this command'''
-    def GetResources(self):
-        return {'Pixmap': os.path.join(icons, 'livinghinge.svg'),
-                'MenuText': "Add living hinge to face",
-                'ToolTip': "Add living hinge to face"}
-
-    '''Do something here'''
-    def Activated(self):
-        "Show the task panel so the user can specify the number of living hinge etc"
-        doc = FreeCAD.ActiveDocument
-        view = Gui.ActiveDocument.ActiveView
-        activeBody = None
-        selobj = Gui.Selection.getSelectionEx()[0].Object
-        
-        if hasattr(view,'getActiveObject'):
-            activeBody = view.getActiveObject('pdbody')
-        
-        if not laserhelper.lbIsOperationLegal(activeBody, selobj):
-            return
-        
-        doc.openTransaction("LivingHinge")
-        
-        if activeBody is None or not laserhelper.lbIsPartDesign(selobj):
-            a = doc.addObject("Part::FeaturePython","LivingHinge")
-            cls = LBGenerateLivingHinge(a)
-            LBLivingHingeViewProviderTree(a.ViewObject)
-            a.AutoUpdate = True
-            cls.execute(a)
-        else:
-            a = doc.addObject("PartDesign::FeaturePython","LivingHinge")
-            cls = LBGenerateLivingHinge(a)
-            LBLivingHingeViewProviderFlat(a.ViewObject)
-            a.AutoUpdate = True
-            activeBody.addObject(a)
-            cls.execute(a)
-        
-        panel = LBLivingHingeTaskPanel(False)
-        panel.obj = a
-        panel.update()
-        FreeCADGui.Control.showDialog(panel)
-        return
-
-    '''Here you can define if the command must be active or not (greyed) if certain conditions are met or not. This function is optional.'''
-    def IsActive(self):
-        if len(Gui.Selection.getSelection()) < 1 or len(Gui.Selection.getSelectionEx()[0].SubElementNames) < 1:
-            return False
-        selobj = Gui.Selection.getSelection()[0]
-        if selobj.isDerivedFrom("Sketcher::SketchObject"):
-            return False
-        for selFace in Gui.Selection.getSelectionEx()[0].SubObjects:
-            if type(selFace) == Part.Vertex :
-                return False
-            if type(selFace) == Part.Edge :
-                return False
-        return True
-
-
-'''Add the new command in to FreeCAD'''
-Gui.addCommand('LBLivingHinge', LBLivingHinge())
+    def attach(self, vobj):
+        _install_living_hinge_view_provider(vobj, "Flat")

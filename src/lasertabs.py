@@ -20,536 +20,89 @@
 # *                                                                         *
 # ***************************************************************************
 
-## Problems
-###1) Prevent tabs on a curved surface (or make them work)
-
-from FreeCAD import Gui
-import FreeCAD
-import FreeCADGui
-import Part
-#import Sketcher
-import os
-from PySide import QtCore, QtGui
-
-import src.laserhelper as laserhelper
-
-import FreeCAD, FreeCADGui, Part, os, math
 import FreeCAD as App
-import sys
-freecadpython = sys.executable.replace('freecad', 'python')
-App.Console.PrintMessage('Using ' + freecadpython +'\n')
+_wrn = App.Console.PrintWarning
 
-#import debugpy
-#debugpy.configure(python=freecadpython)
-#
-#if not debugpy.is_client_connected():
-#    debugpy.listen(5678)
-#        
-#print("waiting for debugger attach")
-#debugpy.wait_for_client()
+#we have restructured the workbench to the new proxy class structure, so when opening files from older versions we need to migrate the properties to the new class
 
-__dir__ = os.path.dirname(__file__)
-icons = os.path.join(__dir__, '../Resources/icons')
-path_to_ui = os.path.join(__dir__, '../dialogs/tabs.ui')
-
-
-def LBEnsureTabHookProperties(obj):
-    """Add TabHook* properties if missing (backward compatibility for older saved objects)."""
-    if not hasattr(obj, 'SwapEnds'):
-        obj.addProperty("App::PropertyBool", "SwapEnds", "Parameters", "Swap Ends").SwapEnds = False
-    if not hasattr(obj, 'SwapHookDirection'):
-        obj.addProperty("App::PropertyBool", "SwapHookDirection", "Parameters", "Swap Hook Direction").SwapHookDirection = False
-    if not hasattr(obj, 'TabHookDepth'):
-        obj.addProperty("App::PropertyLength", "TabHookDepth", "Parameters", "Tab Hook Depth").TabHookDepth = 0.0
-    if not hasattr(obj, 'TabHookLength'):
-        obj.addProperty("App::PropertyLength", "TabHookLength", "Parameters", "Tab Hook Length").TabHookLength = 0.0
-    if not hasattr(obj, 'TabHookRadius'):
-        obj.addProperty("App::PropertyLength", "TabHookRadius", "Parameters", "Tab Hook Radius").TabHookRadius = 0.0
-    if not hasattr(obj, 'Kerf'):
-        obj.addProperty("App::PropertyLength", "Kerf", "Parameters", "Laser kerf (full beam width). Tabs are widened by kerf/2 on each side to compensate.").Kerf = 0.0
-
+def _install_tabs_view_provider(vobj, kind):
+    from freecad.laserboxtools.features.add_tabs_feature_vp import (
+        LBTabsViewProviderFlat,
+        LBTabsViewProviderTree,
+    )
+    if kind == "Tree":
+        LBTabsViewProviderTree(vobj)
+    else:
+        LBTabsViewProviderFlat(vobj)
 
 class LBGenerateTabs:
-    def __init__(self, obj, base_link=None):
-        '''"Generate Tabs"
+    def onDocumentRestored(self, obj):
 
-        base_link: optional (base_document_object, sub_element_names) to skip GUI selection
-        (e.g. programmatic use from Basic Box). If None, uses the current selection.
-        '''
-        obj.Proxy = self
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Auto Update")
-        obj.addProperty("App::PropertyBool","AutoUpdate","ParametersExt",_tip_).AutoUpdate = False
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Tab Count")
-        obj.addProperty("App::PropertyInteger","TabCount","Parameters",_tip_).TabCount = 0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Tab Width")
-        obj.addProperty("App::PropertyLength","TabWidth","Parameters",_tip_).TabWidth = 10.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Tab Depth")
-        obj.addProperty("App::PropertyLength","TabDepth","Parameters",_tip_).TabDepth = 3.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Gap Width")
-        obj.addProperty("App::PropertyLength","GapWidth","Parameters",_tip_).GapWidth = 10.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Base Object")
-        obj.addProperty("App::PropertyLinkSub", "baseObject", "Parameters",_tip_)
+        if not hasattr(obj, 'AutoUpdate'):
+            obj.addProperty("App::PropertyBool","AutoUpdate","ParametersExt", "Auto Update").AutoUpdate = False
 
-        if base_link is not None:
-            bo, sub = base_link
-            obj.baseObject = (bo, tuple(sub))
-        else:
-            selobj = Gui.Selection.getSelectionEx()[0]
-            obj.baseObject = (selobj.Object, selobj.SubElementNames)
+        if not hasattr(obj, 'TabCount'):
+            obj.addProperty("App::PropertyInteger","TabCount","Parameters", "Tab Count").TabCount = 0
 
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Use Refine")
-        obj.addProperty("App::PropertyBool","Refine","ParametersExt",_tip_).Refine = True
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Where to start tabs")
-        obj.addProperty("App::PropertyEnumeration", "TabMode", "Parameters", _tip_).TabMode = ["From One End", "From Both Ends", "From Middle"]
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Swap Ends")
-        obj.addProperty("App::PropertyBool","SwapEnds","Parameters",_tip_).SwapEnds = False
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Tab Taper Angle")
-        obj.addProperty("App::PropertyLength","TabTaper","Parameters",_tip_).TabTaper = 0.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Tab Depth")
-        obj.addProperty("App::PropertyLength","Margin1","Parameters",_tip_).Margin1 = 0.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Tab Depth")
-        obj.addProperty("App::PropertyLength","Margin2","Parameters",_tip_).Margin2 = 0.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Tab Hook Depth")
-        obj.addProperty("App::PropertyLength","TabHookDepth","Parameters",_tip_).TabHookDepth = 0.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Tab Hook Length")
-        obj.addProperty("App::PropertyLength","TabHookLength","Parameters",_tip_).TabHookLength = 0.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Tab Hook Radius")
-        obj.addProperty("App::PropertyLength","TabHookRadius","Parameters",_tip_).TabHookRadius = 0.0
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Swap Hook Direction")
-        obj.addProperty("App::PropertyBool","SwapHookDirection","Parameters",_tip_).SwapHookDirection = False
-        _tip_ = QtCore.QT_TRANSLATE_NOOP("App::Property","Laser kerf (full beam width). Tabs are widened by kerf/2 on each side to compensate.")
-        obj.addProperty("App::PropertyLength","Kerf","Parameters",_tip_).Kerf = 0.0
+        if not hasattr(obj, 'TabWidth'):
+            obj.addProperty("App::PropertyLength","TabWidth","Parameters", "Tab Width").TabWidth = 10.0
 
-    def getElementMapVersion(self, _fp, ver, _prop, restored):
-        #TODO not sure what this is
-        if not restored:
-            return "lb0.1.0"
+        if not hasattr(obj, 'TabDepth'):
+            obj.addProperty("App::PropertyLength","TabDepth","Parameters", "Tab Depth").TabDepth = 3.0
 
-    def execute(self, fp):
-        '''"Print a short message when doing a recomputation, this method is mandatory" '''
-        LBEnsureTabHookProperties(fp)
-        # pass selected object shape
-        Main_Object = fp.baseObject[0].Shape.copy()
-        face = fp.baseObject[1]
+        if not hasattr(obj, 'GapWidth'):
+            obj.addProperty("App::PropertyLength","GapWidth","Parameters", "Gap Width").GapWidth = 10.0
 
-        s = laserhelper.lbCreateTabs(tabCount = fp.TabCount, tabWidth = fp.TabWidth.Value, gapWidth = fp.GapWidth.Value,
-                        tabDepth = fp.TabDepth.Value, mode = fp.TabMode, swapends = fp.SwapEnds, tabTaper = fp.TabTaper.Value,
-                        margin1 = fp.Margin1.Value, margin2 = fp.Margin2.Value,
-                        tabHookDepth = fp.TabHookDepth.Value, tabHookLength = fp.TabHookLength.Value, tabHookRadius = fp.TabHookRadius.Value,
-                        swapHookDirection = fp.SwapHookDirection,
-                        subtraction = False, refine = fp.Refine, selFaceNames = face, selObject = Main_Object,
-                        kerf = fp.Kerf.Value)
-        fp.baseObject[0].ViewObject.Visibility = False
-        fp.Shape = s
+        if not hasattr(obj, 'Refine'):
+            obj.addProperty("App::PropertyBool","Refine","ParametersExt", "Use Refine").Refine = True
 
+        if not hasattr(obj, 'TabMode'):
+            obj.addProperty("App::PropertyEnumeration", "TabMode", "Parameters", "Where to start tabs").TabMode = ["From One End", "From Both Ends", "From Middle"]
 
-def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_depth, gap_width, tab_mode, tab_taper, margin1, margin2, refine=True, plate_for_name=None, kerf=0.0):
-    """Create a parametric Tabs feature linked to link_obj (no GUI selection).
+        if not hasattr(obj, 'SwapEnds'):
+            obj.addProperty("App::PropertyBool","SwapEnds","Parameters", "Swap Ends").SwapEnds = False
 
-    link_obj: object for baseObject / FaceN refs (PartDesign: Body.Tip, e.g. Pad — not the Body).
-    plate_for_name: optional; used for unique Name/Label when link_obj is Tip but the plate is a Body.
+        if not hasattr(obj, 'TabTaper'):
+            obj.addProperty("App::PropertyLength","TabTaper","Parameters", "Tab Taper Angle").TabTaper = 0.0
 
-    PartDesign::FeaturePython + flat view when link_obj lies in a PartDesign::Body; Part::FeaturePython
-    + tree view for Part workbench.
+        if not hasattr(obj, 'Margin1'):
+            obj.addProperty("App::PropertyLength","Margin1","Parameters", "Margin 1").Margin1 = 0.0
 
-    Returns the new Tabs object, or None if tabs were skipped (no faces or zero depth).
-    """
-    if tab_depth <= 0 or not face_names:
-        return None
+        if not hasattr(obj, 'Margin2'):
+            obj.addProperty("App::PropertyLength","Margin2","Parameters", "Margin 2").Margin2 = 0.0
 
-    uniq = plate_for_name.Name if plate_for_name is not None else link_obj.Name
-    name = doc.getUniqueObjectName("Tabs_" + uniq)
-    pd_body = laserhelper.lbPartDesignBodyContaining(link_obj)
-    if pd_body is not None:
-        a = doc.addObject("PartDesign::FeaturePython", name)
-    else:
-        a = doc.addObject("Part::FeaturePython", name)
-    cls = LBGenerateTabs(a, base_link=(link_obj, tuple(face_names)))
-    if pd_body is not None:
-        LBTabsViewProviderFlat(a.ViewObject)
-    else:
-        LBTabsViewProviderTree(a.ViewObject)
-    a.TabCount = tab_count
-    a.TabWidth = float(tab_width)
-    a.TabDepth = float(tab_depth)
-    a.GapWidth = float(gap_width)
-    a.TabMode = tab_mode
-    a.TabTaper = float(tab_taper)
-    a.Margin1 = float(margin1)
-    a.Margin2 = float(margin2)
-    a.SwapEnds = False
-    a.Refine = refine
-    a.TabHookDepth = 0.0
-    a.TabHookLength = 0.0
-    a.TabHookRadius = 0.0
-    a.SwapHookDirection = False
-    a.Kerf = float(kerf)
-    label_src = plate_for_name if plate_for_name is not None else link_obj
-    a.Label = "Tabs ({})".format(label_src.Label)
-    if pd_body is not None:
-        pd_body.addObject(a)
-    cls.execute(a)
-    # After execute: avoid updateData-driven doc.recompute() during property batching (can loop with dependents).
-    a.AutoUpdate = True
-    return a
+        if not hasattr(obj, 'TabHookDepth'):
+            obj.addProperty("App::PropertyLength","TabHookDepth","Parameters", "Tab Hook Depth").TabHookDepth = 0.0
 
+        if not hasattr(obj, 'TabHookLength'):
+            obj.addProperty("App::PropertyLength","TabHookLength","Parameters", "Tab Hook Length").TabHookLength = 0.0
 
-_LB_TABS_AUTOUPDATE_PROPS = (
-    "TabDepth", "TabWidth", "GapWidth", "TabCount", "TabTaper", "Refine",
-    "TabMode", "Margin1", "Margin2", "baseObject", "SwapEnds",
-    "TabHookDepth", "TabHookLength", "TabHookRadius", "SwapHookDirection",
-    "Kerf",
-)
+        if not hasattr(obj, 'TabHookRadius'):
+            obj.addProperty("App::PropertyLength","TabHookRadius","Parameters", "Tab Hook Radius").TabHookRadius = 0.0
 
+        if not hasattr(obj, 'SwapHookDirection'):
+            obj.addProperty("App::PropertyBool","SwapHookDirection","Parameters", "Swap Hook Direction").SwapHookDirection = False
+
+        if not hasattr(obj, 'Kerf'):
+            obj.addProperty("App::PropertyLength","Kerf","Parameters", "Laser kerf (full beam width). Tabs are widened by kerf/2 on each side to compensate.").Kerf = 0.0
+
+        # We don't need to remove any properties
+
+        # src.lasertabs is a top-level module, so a relative import cannot see freecad/.
+        from freecad.laserboxtools.features.add_tabs_feature_object import LBGenerateTabs as LBGenerateTabsNew
+
+        LBGenerateTabsNew(obj)
+        _wrn("New proxy class used; properties migrated\n")
+
+        if App.GuiUp and getattr(obj, "ViewObject", None) is not None:
+            # PartDesign features were given the flat provider; Part features the tree provider.
+            kind = "Flat" if obj.isDerivedFrom("PartDesign::Feature") else "Tree"
+            _install_tabs_view_provider(obj.ViewObject, kind)
 
 class LBTabsViewProviderTree:
-    "A View provider that nests children objects under the created one, like Part"
-
-    def __init__(self, vobj):
-        vobj.Proxy = self
-        self.Object = vobj.Object
-
     def attach(self, vobj):
-        self.Object = vobj.Object
-        return
-
-    def setupContextMenu(self, viewObject, menu):
-        action = menu.addAction(FreeCAD.Qt.translate("QObject", "Edit %1").replace("%1", viewObject.Object.Label))
-        action.triggered.connect(lambda: self.startDefaultEditMode(viewObject))
-        return False
-
-    def startDefaultEditMode(self, viewObject):
-        document = viewObject.Document.Document
-        if not document.HasPendingTransaction:
-            text = FreeCAD.Qt.translate("QObject", "Edit %1").replace("%1", viewObject.Object.Label)
-            document.openTransaction(text)
-        viewObject.Document.setEdit(viewObject.Object, 0)
-
-    def updateData(self, fp, prop):
-        '''If a property of the handled feature has changed we have the chance to handle this here'''
-        laserhelper.lbAutoRecomputeOnProperty(fp, prop, _LB_TABS_AUTOUPDATE_PROPS)
-        return
-
-    def getDisplayModes(self, vobj):
-        modes=[]
-        return modes
-
-    def setDisplayMode(self,mode):
-        return mode
-
-    def __getstate__(self):
-        return None
-
-    def __setstate__(self,state):
-        if state is not None:
-            doc = FreeCAD.ActiveDocument
-            self.Object = doc.getObject(state['ObjectName'])
-
-    def claimChildren(self):
-        objs = []
-        if hasattr(self.Object,"baseObject"):
-            objs.append(self.Object.baseObject[0])
-        if hasattr(self.Object,"Sketch"):
-            objs.append(self.Object.Sketch)
-        return objs
-    
-    def getIcon(self):
-        return os.path.join(icons, 'tabs.svg')
-
-    def setEdit(self, vobj, mode):
-        if (mode != 0):
-            return False #we only handle the detault mode
-
-        laserhelper.lbActivateWorkbench()
-        LBEnsureTabHookProperties(vobj.Object)
-        taskd = LBTabsTaskPanel(True)
-        taskd.obj = vobj.Object
-        self.Object.AutoUpdate = False
-        taskd.update()
-        self.Object.AutoUpdate = True
-        FreeCADGui.Control.showDialog(taskd)
-        return True
-
-    def unsetEdit(self, vobj, mode):
-        if (mode != 0):
-            return False #we only handle the detault mode
-            
-        FreeCADGui.Control.closeDialog()
-        return False
-
+        _install_tabs_view_provider(vobj, "Tree")
 
 class LBTabsViewProviderFlat:
-    "A View provider that places objects flat under base object, like PartDesign"
-
-    def __init__(self, obj):
-        obj.Proxy = self
-        self.Object = obj.Object
-
-    def attach(self, obj):
-        self.Object = obj.Object
-        return
-
-    def updateData(self, fp, prop):
-        '''If a property of the handled feature has changed we have the chance to handle this here'''
-        laserhelper.lbAutoRecomputeOnProperty(fp, prop, _LB_TABS_AUTOUPDATE_PROPS)
-        return
-
-    def getDisplayModes(self,obj):
-        modes=[]
-        return modes
-
-    def setDisplayMode(self,mode):
-        return mode
-
-    def __getstate__(self):
-        return None
-
-    def __setstate__(self,state):
-        if state is not None:
-            doc = FreeCAD.ActiveDocument
-            self.Object = doc.getObject(state['ObjectName'])
-
-    def claimChildren(self):
-        objs = []
-        if hasattr(self.Object,"Sketch"):
-            objs.append(self.Object.Sketch)
-        return objs
-    
-    def getIcon(self):
-        return os.path.join(icons, 'tabs.svg')
-
-    def setEdit(self,vobj,mode):
-        if (mode != 0):
-            return False #we only handle the detault mode
-
-        laserhelper.lbActivateWorkbench()
-        LBEnsureTabHookProperties(vobj.Object)
-        taskd = LBTabsTaskPanel(True)
-        taskd.obj = vobj.Object
-        self.Object.AutoUpdate = False
-        taskd.update()
-        self.Object.AutoUpdate = True
-        FreeCADGui.Control.showDialog(taskd)
-        return True
-
-    def unsetEdit(self,vobj,mode):
-        if (mode != 0):
-            return False #we only handle the detault mode
-            
-        FreeCADGui.Control.closeDialog()
-        return False
-
-
-class LBTabsTaskPanel:
-    def __init__(self, editing):
-        self.editing = editing
-        self.obj = None
-        self._expressionBound = False
-        # this will create a Qt widget from our ui file
-        self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
-        QtCore.QObject.connect(self.form.pbUpdateTabFaces, QtCore.SIGNAL("clicked()"), self.updateTabFaces)
-        QtCore.QObject.connect(self.form.pbEditTabFaces, QtCore.SIGNAL("clicked()"), self.editTabFaces)
-        self.form.TabMode.setCurrentIndex(0)
-        self.form.SwapEnds.setChecked(False)
-        self.form.SwapHookDirection.setChecked(False)
-        self.form.TabCount.valueChanged.connect(self.onTabCountChanged)
-        self.form.TabMode.currentTextChanged.connect(self.onTabModeChanged)
-        self.form.SwapEnds.stateChanged.connect(self.onSwapEndsChanged)
-        self.form.SwapHookDirection.stateChanged.connect(self.onSwapHookDirectionChanged)
-        self.update()
-
-    def bindExpressions(self):
-        if self._expressionBound or not self.obj:
-            return
-        obj = self.obj
-        laserhelper.lbBindIntSpinBox(self.form.TabCount, obj, "TabCount")
-        laserhelper.lbBindQuantitySpinBox(self.form.TabWidth, obj, "TabWidth")
-        laserhelper.lbBindQuantitySpinBox(self.form.TabDepth, obj, "TabDepth")
-        laserhelper.lbBindQuantitySpinBox(self.form.GapWidth, obj, "GapWidth")
-        laserhelper.lbBindQuantitySpinBox(self.form.TabTaper, obj, "TabTaper")
-        laserhelper.lbBindQuantitySpinBox(self.form.Margin1, obj, "Margin1")
-        laserhelper.lbBindQuantitySpinBox(self.form.Margin2, obj, "Margin2")
-        laserhelper.lbBindQuantitySpinBox(self.form.TabHookDepth, obj, "TabHookDepth")
-        laserhelper.lbBindQuantitySpinBox(self.form.TabHookLength, obj, "TabHookLength")
-        laserhelper.lbBindQuantitySpinBox(self.form.TabHookRadius, obj, "TabHookRadius")
-        laserhelper.lbBindQuantitySpinBox(self.form.Kerf, obj, "Kerf")
-        self.form.TabMode.setCurrentText(obj.TabMode)
-        self.form.SwapEnds.setChecked(obj.SwapEnds)
-        self.form.SwapHookDirection.setChecked(obj.SwapHookDirection)
-        self._expressionBound = True
-
-    # def updateTabModeSwapEndsState(self):
-    #     """Disable TabMode and SwapEnds when TabCount is 0."""
-    #     enabled = self.form.TabCount.value() != 0
-    #     self.form.TabMode.setEnabled(enabled)
-    #     self.form.SwapEnds.setEnabled(enabled and self.form.TabMode.currentText() == "From One End")
-
-    def onTabCountChanged(self, val):
-        if self.obj and self.obj.TabMode == "From Both Ends":
-            if val % 2 != 0:
-                if self.obj.TabCount > val:
-                    val = val - 1
-                else:
-                    val = val + 1
-                self.form.TabCount.setProperty("value", val)
-
-    def onTabModeChanged(self, val):
-        if self.obj:
-            self.obj.TabMode = val
-
-        if self.obj and val == "From Both Ends":
-            if self.obj.TabCount % 2 != 0:
-                self.form.TabCount.setProperty("value", self.obj.TabCount + 1)
-
-    def onSwapEndsChanged(self, val):
-        self.obj.SwapEnds = val
-
-    def onSwapHookDirectionChanged(self, val):
-        self.obj.SwapHookDirection = val
-
-    def update(self):
-        if self.obj:
-            self.bindExpressions()
-        'fills the treeWidgetTabFaces'
-        self.form.treeWidgetTabFaces.clear()
-        if self.obj:
-            f = self.obj.baseObject
-            if isinstance(f[1], list):
-                for subf in f[1]:
-                    item = QtGui.QTreeWidgetItem(self.form.treeWidgetTabFaces)
-                    item.setText(0, f[0].Name)
-                    item.setIcon(0, QtGui.QIcon(":/icons/Tree_Part.svg"))
-                    item.setText(1, subf)
-            else:
-                item = QtGui.QTreeWidgetItem(self.form.treeWidgetTabFaces)
-                item.setText(0, f[0].Name)
-                item.setIcon(0, QtGui.QIcon(":/icons/Tree_Part.svg"))
-                item.setText(1, f[1][0])
-        self.retranslateUi(self.form)
-
-    def editTabFaces(self):
-        print(f"edit tab faces")  
-        self.obj.baseObject[0].ViewObject.Visibility = True
-        self.obj.ViewObject.Visibility = False
-        self.form.pbEditTabFaces.setEnabled(False)
-        self.form.pbUpdateTabFaces.setEnabled(True)
-        self.form.treeWidgetTabFaces.setEnabled(True)
-        self.copyBaseObject = self.obj.baseObject
-
-    def updateTabFaces(self):
-        self.form.pbEditTabFaces.setEnabled(True)
-        self.form.pbUpdateTabFaces.setEnabled(False)
-        self.form.treeWidgetTabFaces.setEnabled(False)
-        print(f"update tab faces")  
-        if self.obj:
-            if len(FreeCADGui.Selection.getSelectionEx()) < 1:
-                laserhelper.lbErrorMessage("Error: Invalid selection")
-            else:
-                sel = FreeCADGui.Selection.getSelectionEx()[0]
-                if sel.HasSubObjects:
-                    obj = sel.Object
-                    for elt in sel.SubElementNames:
-                        if "Face" in elt:
-                            face = self.obj.baseObject
-                            found = False
-                            if (face[0] == obj.Name):
-                                if isinstance(face[1], tuple):
-                                    for subf in face[1]:
-                                        if subf == elt:
-                                            found = True
-                                else:
-                                    if (face[1][0] == elt):
-                                        found = True
-
-                            if not found:
-                                    self.obj.baseObject = (sel.Object, sel.SubElementNames)
-                self.update()
-        self.obj.baseObject[0].ViewObject.Visibility = False
-        self.obj.ViewObject.Visibility = True
-
-    def accept(self):
-        FreeCAD.ActiveDocument.recompute()
-        FreeCAD.ActiveDocument.commitTransaction()
-        FreeCADGui.Control.closeDialog()
-        FreeCADGui.ActiveDocument.resetEdit()
-        return True
-
-    def reject(self):
-        if not self.editing:  # creating: abort transaction to undo creation
-            self.obj.baseObject[0].ViewObject.Visibility = True
-            self.obj.ViewObject.Visibility = False
-        if FreeCAD.ActiveDocument.HasPendingTransaction:
-            FreeCAD.ActiveDocument.abortTransaction()
-        FreeCAD.ActiveDocument.recompute()
-        FreeCADGui.Control.closeDialog()
-
-    def retranslateUi(self, TaskPanel):
-        self.form.pbUpdateTabFaces.setText(QtGui.QApplication.translate("draft", "Update", None))
-
-
-'''My Command Class'''
-class LBTabs:
-
-    '''My new command'''
-    def __init__(self):
-        return
-
-    '''Return the resources for this command'''
-    def GetResources(self):
-        return {'Pixmap': os.path.join(icons, 'tabs.svg'),
-                'MenuText': "Add tabs to face",
-                'ToolTip': "Add tabs to face"}
-
-    '''Do something here'''
-    def Activated(self):
-        "Show the task panel so the user can specify the number of tabs etc"
-        doc = FreeCAD.ActiveDocument
-        view = Gui.ActiveDocument.ActiveView
-        activeBody = None
-        selobj = Gui.Selection.getSelectionEx()[0].Object
-        
-        if hasattr(view,'getActiveObject'):
-            activeBody = view.getActiveObject('pdbody')
-        
-        if not laserhelper.lbIsOperationLegal(activeBody, selobj):
-            return
-        
-        doc.openTransaction("Tabs")
-        
-        if activeBody is None or not laserhelper.lbIsPartDesign(selobj):
-            a = doc.addObject("Part::FeaturePython","Tabs")
-            cls = LBGenerateTabs(a)
-            LBTabsViewProviderTree(a.ViewObject)
-            a.AutoUpdate = True
-            cls.execute(a)
-        else:
-            a = doc.addObject("PartDesign::FeaturePython","Tabs")
-            cls = LBGenerateTabs(a)
-            LBTabsViewProviderFlat(a.ViewObject)
-            a.AutoUpdate = True
-            activeBody.addObject(a)
-            cls.execute(a)
-        
-        panel = LBTabsTaskPanel(False)
-        panel.obj = a
-        panel.update()
-        FreeCADGui.Control.showDialog(panel)
-        return
-
-    '''Here you can define if the command must be active or not (greyed) if certain conditions are met or not. This function is optional.'''
-    def IsActive(self):
-        if len(Gui.Selection.getSelection()) < 1 or len(Gui.Selection.getSelectionEx()[0].SubElementNames) < 1:
-            return False
-        selobj = Gui.Selection.getSelection()[0]
-        if selobj.isDerivedFrom("Sketcher::SketchObject"):
-            return False
-        for selFace in Gui.Selection.getSelectionEx()[0].SubObjects:
-            if type(selFace) == Part.Vertex :
-                return False
-            if type(selFace) == Part.Edge :
-                return False
-        return True
-
-
-'''Add the new command in to FreeCAD'''
-Gui.addCommand('LBTabs', LBTabs())
+    def attach(self, vobj):
+        _install_tabs_view_provider(vobj, "Flat")

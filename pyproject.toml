@@ -1,0 +1,43 @@
+# References:
+# https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
+# https://packaging.python.org/en/latest/guides/packaging-namespace-packages/#native-namespace-packages
+# https://packaging.python.org/en/latest/guides/single-sourcing-package-version/
+# https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "freecad-laserboxtools"
+dynamic = ["version"]
+description = "A FreeCAD workbench for designing laser-cut boxes and enclosures. Create parametric tabs, slots, and living hinges on your 3D models for easy laser cutting and assembly."
+readme = "README.md"
+license = "LGPL-2.1-or-later"
+license-files = [
+    "LICENSE-Code",
+    "LICENSE-Assets"
+]
+maintainers = [
+    {name = "Eskibrew", email = "eskibrew@gmail.com"},
+]
+requires-python = ">=3.11"
+
+
+[dependency-groups]
+dev = [
+    "PySide6",
+    "ruff",
+    "codespell",
+    "freecad-typings",
+]
+
+[project.urls]
+source = "https://github.com/Eskibrew/LaserBoxTools"
+
+[tool.hatch.version]
+path = "freecad/laserboxtools/version.py"
+# Hatchling looks for __version__ = "..." by default
+
+[tool.hatch.build.targets.wheel]
+packages = ["freecad"]

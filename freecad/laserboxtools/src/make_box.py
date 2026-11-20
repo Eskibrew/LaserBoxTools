@@ -20,21 +20,14 @@
 # *                                                                         *
 # ***************************************************************************
 
-from FreeCAD import Gui
-import FreeCAD
-import FreeCADGui
-import Part
-import Sketcher
-import os
-from PySide import QtCore, QtGui
+from __future__ import annotations
 
-from src.lasertabs import LBCreateTabsFeature
-from src.laserslots import LBCreateSlotsFeature
-import src.laserhelper as laserhelper
+import FreeCAD as App
+import Part, Sketcher
 
-__dir__ = os.path.dirname(__file__)
-icons = os.path.join(__dir__, '../Resources/icons')
-path_to_ui = os.path.join(__dir__, '../dialogs/basicbox.ui')
+from . import laser_helper as laserhelper
+from .create_tabs import LBCreateTabsFeature
+from .create_slots import LBCreateSlotsFeature
 
 
 def laser_face_names_two_largest_joint_faces_per_axis(shape, thickness, axis, tol=None):
@@ -134,7 +127,7 @@ def laser_get_origin_plane(body, plane_role):
 
 
 def laser_make_box_piece(x, y, thickness, offset, plane_role, name): 
-    body = FreeCAD.ActiveDocument.addObject('PartDesign::Body', name)
+    body = App.ActiveDocument.addObject('PartDesign::Body', name)
     sketch = body.newObject('Sketcher::SketchObject','Sketch')
 
     # Get the correct plane from the body's Origin by Role
@@ -147,13 +140,13 @@ def laser_make_box_piece(x, y, thickness, offset, plane_role, name):
     sketch.MapMode = 'FlatFace'
 
     # Offset along the plane's normal (local Z)
-    sketch.AttachmentOffset = FreeCAD.Placement(FreeCAD.Vector(0.000, 0.000, offset), FreeCAD.Rotation(FreeCAD.Vector(0.000, 0.000, 1.000), 0.000))
+    sketch.AttachmentOffset = App.Placement(App.Vector(0.000, 0.000, offset), App.Rotation(App.Vector(0.000, 0.000, 1.000), 0.000))
 
     geoList = []
-    geoList.append(Part.LineSegment(FreeCAD.Vector(-x / 2, y / 2, 0), FreeCAD.Vector(x / 2, y / 2, 0)))
-    geoList.append(Part.LineSegment(FreeCAD.Vector(x / 2, y / 2, 0), FreeCAD.Vector(x / 2, -y / 2, 0)))
-    geoList.append(Part.LineSegment(FreeCAD.Vector(x / 2, -y / 2, 0), FreeCAD.Vector(-x / 2, -y / 2, 0)))
-    geoList.append(Part.LineSegment(FreeCAD.Vector(-x / 2, -y / 2, 0), FreeCAD.Vector(-x / 2, y / 2, 0)))
+    geoList.append(Part.LineSegment(App.Vector(-x / 2, y / 2, 0), App.Vector(x / 2, y / 2, 0)))
+    geoList.append(Part.LineSegment(App.Vector(x / 2, y / 2, 0), App.Vector(x / 2, -y / 2, 0)))
+    geoList.append(Part.LineSegment(App.Vector(x / 2, -y / 2, 0), App.Vector(-x / 2, -y / 2, 0)))
+    geoList.append(Part.LineSegment(App.Vector(-x / 2, -y / 2, 0), App.Vector(-x / 2, y / 2, 0)))
     sketch.addGeometry(geoList, False)
 
     conList = []
@@ -178,7 +171,7 @@ def laser_make_box_piece(x, y, thickness, offset, plane_role, name):
 def laser_make_box_piece_simple(name, length, width, height, position):
     """Create a Part::Feature box with given dimensions and position (corner at minimum coords)."""
     box_shape = Part.makeBox(length, width, height, position)
-    obj = FreeCAD.ActiveDocument.addObject("Part::Feature", name)
+    obj = App.ActiveDocument.addObject("Part::Feature", name)
     obj.Shape = box_shape
     return obj
 
@@ -220,9 +213,9 @@ def laser_face_normal_world(face):
         try:
             n = face.normalAt(0.5, 0.5)
         except Exception:
-            return FreeCAD.Vector(1, 0, 0)
+            return App.Vector(1, 0, 0)
     if n.Length < 1e-10:
-        return FreeCAD.Vector(1, 0, 0)
+        return App.Vector(1, 0, 0)
     return n.normalize()
 
 
@@ -235,9 +228,9 @@ def laser_face_names_for_tab_slot_faces_filtered_by_axes(shape, thickness, world
         return laser_face_names_for_tab_slot_faces(shape, thickness, tol)
 
     axis_vecs = {
-        'X': FreeCAD.Vector(1, 0, 0),
-        'Y': FreeCAD.Vector(0, 1, 0),
-        'Z': FreeCAD.Vector(0, 0, 1),
+        'X': App.Vector(1, 0, 0),
+        'Y': App.Vector(0, 1, 0),
+        'Z': App.Vector(0, 0, 1),
     }
 
     wanted = [axis_vecs[a] for a in world_axes if a in axis_vecs]
@@ -269,7 +262,7 @@ def laser_recompute_partdesign_body_for_tip(doc, body):
     """Ensure the PartDesign body Tip has a valid shape for face picking.
 
     Uses a **scoped** recompute (this body only) when the FreeCAD version supports it. A full
-    ``doc.recompute()`` recomputes every object in the document; during Basic Box with tabs/slots,
+    ``doc.recompute()`` recomputes every object in the document; during Make Box with tabs/slots,
     that was called once per panel and dominated runtime as the model grew.
     """
     if doc is None or body is None:
@@ -314,8 +307,8 @@ def laser_link_target_and_shape_for_face_pick(part_obj):
     return part_obj, part_obj.Shape
 
 
-def laser_add_piece_to_basic_box_group(group, piece_obj, feature_added):
-    """Put a box panel under Basic Box Group.
+def laser_add_piece_to_make_box_group(group, piece_obj, feature_added):
+    """Put a box panel under Make Box Group.
 
     Part + Tabs/Slots: the parametric feature is added to the group (nested tree); skip the base solid.
     PartDesign: Tabs/Slots are inside the Body timeline, not the group — always add the Body so the group is not empty.
@@ -341,7 +334,7 @@ def laser_add_tabs_feature_to_group(group, part_obj, thickness, tab_slot_count, 
         face_names = laser_face_names_for_tab_slot_faces(shape, thickness)
 
     if not face_names:
-        FreeCAD.Console.PrintWarning("LaserMakeBox: No tab faces found for '{}'; shortest edge should match material thickness. Skipping tabs.\n".format(part_obj.Label))
+        App.Console.PrintWarning("LaserMakeBox: No tab faces found for '{}'; shortest edge should match material thickness. Skipping tabs.\n".format(part_obj.Label))
         return False
 
     doc = part_obj.Document
@@ -372,7 +365,7 @@ def laser_add_slots_feature_to_group(group, part_obj, thickness, tab_slot_count,
         face_names = laser_face_names_for_tab_slot_faces(shape, thickness)
 
     if not face_names:
-        FreeCAD.Console.PrintWarning("LaserMakeBox: No slot faces found for '{}'; shortest edge should match material thickness. Skipping slots.\n".format(part_obj.Label))
+        App.Console.PrintWarning("LaserMakeBox: No slot faces found for '{}'; shortest edge should match material thickness. Skipping slots.\n".format(part_obj.Label))
         return False
 
     doc = part_obj.Document
@@ -409,7 +402,7 @@ def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, t
     face_tabs = laser_face_names_for_tab_slot_faces_filtered_by_axes(shape, thickness, ('Z',))
 
     if not face_tabs:
-        FreeCAD.Console.PrintWarning("LaserMakeBox: No tab faces (±Z) for '{}'; skipping front/back tab/slot chain.\n".format(plate_obj.Label))
+        App.Console.PrintWarning("LaserMakeBox: No tab faces (±Z) for '{}'; skipping front/back tab/slot chain.\n".format(plate_obj.Label))
         return False
 
     plate_for_name = plate_obj if plate_obj.isDerivedFrom('PartDesign::Body') else None
@@ -434,7 +427,7 @@ def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, t
     face_slots = laser_face_names_for_front_back_slots_on_tabbed_shape(tabs_f.Shape, thickness)
 
     if not face_slots:
-        FreeCAD.Console.PrintWarning("LaserMakeBox: No slot faces (±X) after tabs for '{}' — tabs only.\n".format(plate_obj.Label))
+        App.Console.PrintWarning("LaserMakeBox: No slot faces (±X) after tabs for '{}' — tabs only.\n".format(plate_obj.Label))
 
         if not plate_obj.isDerivedFrom('PartDesign::Body'):
             group.addObject(tabs_f)
@@ -469,7 +462,7 @@ def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_sl
     face_lr = laser_face_names_two_largest_joint_faces_per_axis(shape, thickness, 'X')
 
     if not face_lr:
-        FreeCAD.Console.PrintWarning(
+        App.Console.PrintWarning(
             "LaserMakeBox: No slot faces (±X / left-right) for '{}'; skipping top/bottom slot chain.\n".format(plate_obj.Label)
         )
         return False
@@ -488,7 +481,7 @@ def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_sl
     face_fb = laser_face_names_two_largest_joint_faces_per_axis(slots_first.Shape, thickness, 'Y')
 
     if not face_fb:
-        FreeCAD.Console.PrintWarning(
+        App.Console.PrintWarning(
             "LaserMakeBox: No slot faces (±Y / front-back) after first slots for '{}' — first slot pass only.\n".format(plate_obj.Label)
         )
         if not plate_obj.isDerivedFrom('PartDesign::Body'):
@@ -513,14 +506,14 @@ def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_sl
 
 def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, left, right, front, back, use_tabs_and_slots, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0):
     """Create box using Part workbench (Part::Feature objects, no sketches)."""
-    group = FreeCAD.ActiveDocument.addObject("App::DocumentObjectGroup", "Basic Box Group")
+    group = App.ActiveDocument.addObject("App::DocumentObjectGroup", "Make Box Group")
 
     # Bottom: length x width, at z = -height/2
     if bottom:
         bottom = laser_make_box_piece_simple(
             "Bottom",
             length, width, thickness,
-            FreeCAD.Vector(-length / 2, -width / 2, -height / 2)
+            App.Vector(-length / 2, -width / 2, -height / 2)
         )
         feature_added = False
         if use_tabs_and_slots:
@@ -528,14 +521,14 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
                 group, bottom, thickness,
                 tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, bottom, feature_added)
+        laser_add_piece_to_make_box_group(group, bottom, feature_added)
 
     # Top: length x width, at z = height/2 - thickness
     if top:
         top = laser_make_box_piece_simple(
             "Top",
             length, width, thickness,
-            FreeCAD.Vector(-length / 2, -width / 2, height / 2 - thickness)
+            App.Vector(-length / 2, -width / 2, height / 2 - thickness)
         )
         feature_added = False
         if use_tabs_and_slots:
@@ -543,14 +536,14 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
                 group, top, thickness,
                 tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, top, feature_added)
+        laser_add_piece_to_make_box_group(group, top, feature_added)
 
     # Left: thickness x (width - 2*thickness) x (height - 2*thickness), at x = -length/2
     if left:
         left = laser_make_box_piece_simple(
             "Left",
             thickness, width - 2 * thickness, height - 2 * thickness,
-            FreeCAD.Vector(-length / 2, -width / 2 + thickness, -height / 2 + thickness)
+            App.Vector(-length / 2, -width / 2 + thickness, -height / 2 + thickness)
         )
 
         feature_added = False
@@ -559,14 +552,14 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
                 group, left, thickness,
                 tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, left, feature_added)
+        laser_add_piece_to_make_box_group(group, left, feature_added)
 
     # Right: at x = length/2 - thickness
     if right:
         right = laser_make_box_piece_simple(
             "Right",
             thickness, width - 2 * thickness, height - 2 * thickness,
-            FreeCAD.Vector(length / 2 - thickness, -width / 2 + thickness, -height / 2 + thickness)
+            App.Vector(length / 2 - thickness, -width / 2 + thickness, -height / 2 + thickness)
         )
         feature_added = False
         if use_tabs_and_slots:
@@ -574,14 +567,14 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
                 group, right, thickness,
                 tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, right, feature_added)
+        laser_add_piece_to_make_box_group(group, right, feature_added)
 
     # Front: tabs on top/bottom (±Z), slots on left/right (±X); slots run on the tabbed solid
     if front:
         front = laser_make_box_piece_simple(
             "Front",
             length, thickness, height - 2 * thickness,
-            FreeCAD.Vector(-length / 2, width / 2 - thickness, -height / 2 + thickness)
+            App.Vector(-length / 2, width / 2 - thickness, -height / 2 + thickness)
         )
         feature_added = False
         if use_tabs_and_slots:
@@ -589,14 +582,14 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
                 group, front, thickness,
                 tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, front, feature_added)
+        laser_add_piece_to_make_box_group(group, front, feature_added)
 
     # Back: same edge roles as Front (world ±Z tabs, ±X slots)
     if back:
         back = laser_make_box_piece_simple(
             "Back",
             length, thickness, height - 2 * thickness,
-            FreeCAD.Vector(-length / 2, -width / 2, -height / 2 + thickness)
+            App.Vector(-length / 2, -width / 2, -height / 2 + thickness)
         )
         feature_added = False
         if use_tabs_and_slots:
@@ -604,15 +597,15 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
                 group, back, thickness,
                 tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, back, feature_added)
+        laser_add_piece_to_make_box_group(group, back, feature_added)
 
-    FreeCAD.ActiveDocument.recompute()
+    App.ActiveDocument.recompute()
     return group
 
 
 def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, right, front, back, use_tabs_and_slots, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0):
     """Create box using PartDesign workbench (bodies, sketches, pads)."""
-    group = FreeCAD.ActiveDocument.addObject("App::DocumentObjectGroup", "Basic Box Group")
+    group = App.ActiveDocument.addObject("App::DocumentObjectGroup", "Make Box Group")
 
     if bottom:
         bottom = laser_make_box_piece(length, width, thickness, -height / 2, 'XY_Plane', 'BodyBottom')
@@ -622,7 +615,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
                 group, bottom, thickness,
                 tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, bottom, feature_added)
+        laser_add_piece_to_make_box_group(group, bottom, feature_added)
 
     if top:
         top = laser_make_box_piece(length, width, thickness, (height / 2) - thickness, 'XY_Plane', 'BodyTop')
@@ -632,7 +625,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
                 group, top, thickness,
                 tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, top, feature_added)
+        laser_add_piece_to_make_box_group(group, top, feature_added)
 
     if left:
         left = laser_make_box_piece(width - thickness * 2, height - thickness * 2, thickness, -length / 2, 'YZ_Plane', 'BodyLeft')
@@ -642,7 +635,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
                 group, left, thickness,
                 tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, left, feature_added)
+        laser_add_piece_to_make_box_group(group, left, feature_added)
 
     if right:
         right = laser_make_box_piece(width - thickness * 2, height - thickness * 2, thickness, (length / 2) - thickness, 'YZ_Plane', 'BodyRight')
@@ -652,7 +645,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
                 group, right, thickness,
                 tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, right, feature_added)
+        laser_add_piece_to_make_box_group(group, right, feature_added)
 
     if front:
         front = laser_make_box_piece(length, height - thickness * 2, thickness, (width / 2) - thickness, 'XZ_Plane', 'BodyFront')
@@ -662,7 +655,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
                 group, front, thickness,
                 tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, front, feature_added)
+        laser_add_piece_to_make_box_group(group, front, feature_added)
 
     if back:
         back = laser_make_box_piece(length, height - thickness * 2, thickness, -width / 2, 'XZ_Plane', 'BodyBack')
@@ -672,163 +665,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
                 group, back, thickness,
                 tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
             )
-        laser_add_piece_to_basic_box_group(group, back, feature_added)
+        laser_add_piece_to_make_box_group(group, back, feature_added)
 
-    FreeCAD.ActiveDocument.recompute()
+    App.ActiveDocument.recompute()
     return group
-
-def error_message(msg):
-    diag = QtGui.QMessageBox(QtGui.QMessageBox.Warning, 'Error', msg)
-    diag.setWindowModality(QtCore.Qt.ApplicationModal)
-    diag.exec_()
-
-
-class LBMakeBoxParams:
-    """Hidden document object holding box parameters so the task panel can use expressions."""
-
-    def __init__(self, obj):
-        obj.Proxy = self
-        obj.addProperty("App::PropertyLength", "BoxLength", "Dimensions").BoxLength = 200.0
-        obj.addProperty("App::PropertyLength", "BoxWidth", "Dimensions").BoxWidth = 100.0
-        obj.addProperty("App::PropertyLength", "BoxHeight", "Dimensions").BoxHeight = 50.0
-        obj.addProperty("App::PropertyLength", "BoxThickness", "Dimensions").BoxThickness = 3.0
-        obj.addProperty("App::PropertyInteger", "TabSlotCount", "TabsAndSlots").TabSlotCount = 0
-        obj.addProperty("App::PropertyLength", "TabSlotWidth", "TabsAndSlots").TabSlotWidth = 10.0
-        obj.addProperty("App::PropertyLength", "GapWidth", "TabsAndSlots").GapWidth = 10.0
-        obj.addProperty("App::PropertyLength", "TabTaper", "TabsAndSlots").TabTaper = 0.0
-        obj.addProperty("App::PropertyLength", "Kerf", "TabsAndSlots",
-                        "Laser kerf (beam width): tabs widened and slots narrowed by kerf/2 per side").Kerf = 0.0
-
-
-class LaserMakeBoxTaskPanel:
-    def __init__(self, params_obj):
-        self.params_obj = params_obj
-        self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
-        self.form.rbPartDesign.setChecked(True)
-        self.form.cbTop.setChecked(True)
-        self.form.cbBottom.setChecked(True)
-        self.form.cbLeft.setChecked(True)
-        self.form.cbRight.setChecked(True)
-        self.form.cbFront.setChecked(True)
-        self.form.cbBack.setChecked(True)
-        self.form.cbUseTabsAndSlots.setChecked(False)
-        self.bindExpressions()
-
-    def bindExpressions(self):
-        obj = self.params_obj
-        laserhelper.lbBindQuantitySpinBox(self.form.BoxLength, obj, "BoxLength")
-        laserhelper.lbBindQuantitySpinBox(self.form.BoxWidth, obj, "BoxWidth")
-        laserhelper.lbBindQuantitySpinBox(self.form.BoxHeight, obj, "BoxHeight")
-        laserhelper.lbBindQuantitySpinBox(self.form.BoxThickness, obj, "BoxThickness")
-        laserhelper.lbBindIntSpinBox(self.form.TabSlotCount, obj, "TabSlotCount")
-        laserhelper.lbBindQuantitySpinBox(self.form.TabSlotWidth, obj, "TabSlotWidth")
-        laserhelper.lbBindQuantitySpinBox(self.form.GapWidth, obj, "GapWidth")
-        laserhelper.lbBindQuantitySpinBox(self.form.TabTaper, obj, "TabTaper")
-        laserhelper.lbBindQuantitySpinBox(self.form.Kerf, obj, "Kerf")
-
-    def _removeParamsObject(self):
-        doc = FreeCAD.ActiveDocument
-        if self.params_obj and doc.getObject(self.params_obj.Name):
-            doc.removeObject(self.params_obj.Name)
-
-    def accept(self):
-        length = self.params_obj.BoxLength.Value
-        width = self.params_obj.BoxWidth.Value
-        height = self.params_obj.BoxHeight.Value
-        thickness = self.params_obj.BoxThickness.Value
-
-        if length == 0:
-            error_message('length cannot be zero!')
-            return
-
-        if width == 0:
-            error_message('width cannot be zero!')
-            return
-
-        if height == 0:
-            error_message('height cannot be zero!')
-            return
-
-        if thickness == 0:
-            error_message('thickness cannot be zero!')
-            return
-
-        if not self.form.cbTop.isChecked() and not self.form.cbBottom.isChecked() and not self.form.cbLeft.isChecked() and not self.form.cbRight.isChecked() and not self.form.cbFront.isChecked() and not self.form.cbBack.isChecked():
-            error_message('At least one box part must be selected!')
-            return
-
-        tab_slot_count = self.params_obj.TabSlotCount
-        tab_slot_width = self.params_obj.TabSlotWidth.Value
-        tab_taper = self.params_obj.TabTaper.Value
-        gap_width = self.params_obj.GapWidth.Value
-        kerf = self.params_obj.Kerf.Value
-
-        self._removeParamsObject()
-
-        if self.form.rbPart.isChecked():
-            laser_make_box_pieces_simple(length, width, height, thickness,
-                                        self.form.cbTop.isChecked(),
-                                        self.form.cbBottom.isChecked(),
-                                        self.form.cbLeft.isChecked(),
-                                        self.form.cbRight.isChecked(),
-                                        self.form.cbFront.isChecked(),
-                                        self.form.cbBack.isChecked(),
-                                        self.form.cbUseTabsAndSlots.isChecked(),
-                                        tab_slot_count,
-                                        tab_slot_width,
-                                        tab_taper,
-                                        gap_width,
-                                        "From Middle",
-                                        0,
-                                        0,
-                                        kerf=kerf
-                                        )
-        else:
-            laser_make_box_pieces(length, width, height, thickness,
-                                        self.form.cbTop.isChecked(),
-                                        self.form.cbBottom.isChecked(),
-                                        self.form.cbLeft.isChecked(),
-                                        self.form.cbRight.isChecked(),
-                                        self.form.cbFront.isChecked(),
-                                        self.form.cbBack.isChecked(),
-                                        self.form.cbUseTabsAndSlots.isChecked(),
-                                        tab_slot_count,
-                                        tab_slot_width,
-                                        tab_taper,
-                                        gap_width,
-                                        "From Middle",
-                                        0,
-                                        0,
-                                        kerf=kerf
-                                        )
-        FreeCADGui.Control.closeDialog()
-
-    def reject(self):
-        self._removeParamsObject()
-        FreeCADGui.Control.closeDialog()
-
-
-class LaserMakeBox:
-
-    def __init__(self):
-        return
-
-    def GetResources(self):
-        return {'Pixmap': os.path.join(icons, 'box.svg'),
-                'MenuText': "Make a basic box",
-                'ToolTip': "Make a basic box, without tabs"}
-
-    def IsActive(self):
-        return FreeCAD.ActiveDocument is not None
-
-    def Activated(self):
-        doc = FreeCAD.ActiveDocument
-        params = doc.addObject("App::FeaturePython", doc.getUniqueObjectName("LBBasicBoxParams"))
-        LBMakeBoxParams(params)
-        params.ViewObject.Visibility = False
-        panel = LaserMakeBoxTaskPanel(params)
-        FreeCADGui.Control.showDialog(panel)
-        return
-
-
-Gui.addCommand('LBBasicBox', LaserMakeBox())

@@ -20,4 +20,23 @@
 # *                                                                         *
 # ***************************************************************************
 
-print("Laser Box Tools Workbench Loaded")
+"""
+see: https://wiki.freecad.org/Scripted_objects
+"""
+
+from __future__ import annotations
+from ..resources import Resources
+
+import FreeCADGui as Gui
+
+
+class MakeBoxViewProvider:
+    """
+    ViewProvider with custom Icon.
+    """
+
+    def __init__(self, obj: Gui.ViewProviderDocumentObject) -> None:
+        obj.Proxy = self
+
+    def getIcon(self) -> str:
+        return Resources.icon("box.svg")

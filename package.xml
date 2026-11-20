@@ -1,24 +1,55 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
-  <name>LaserBoxTools</name>
-  <description>A FreeCAD workbench for designing laser-cut boxes and enclosures. Create parametric tabs, slots, and living hinges on your 3D models for easy laser cutting and assembly.</description>
-  <version>0.4.2</version>
-  <date>2026-11-11</date>
-  <maintainer>Eskibrew</maintainer>
-  <author>Eskibrew</author>
-  <license file="LICENSE">LGPL-2.1-or-later</license>
-  <url type="repository" branch="main">https://github.com/Eskibrew/LaserBoxTools</url>
-  <url type="bugtracker">https://github.com/Eskibrew/LaserBoxTools/issues</url>
-  <url type="readme">https://github.com/Eskibrew/LaserBoxTools/blob/main/README.md</url>
-  <url type="documentation">https://github.com/Eskibrew/LaserBoxTools/blob/main/docs</url>
-  <icon>small_icon.svg</icon>
-  <content>
-    <workbench>
-      <classname>LaserBoxToolsWorkbench</classname>
-      <subdirectory>./</subdirectory>
-    </workbench>
-  </content>
-  <dependencies>
-    <freecad>1.0.0</freecad>
-  </dependencies>
+
+    <!-- For information about the contents of this file see
+    https://freecad.github.io/Addon-Academy/Topics/Structuring/Manifest/ -->
+
+    <!--[ Info ]-->
+    <name>Laser Box Tools</name>
+    <description>A FreeCAD workbench for designing laser-cut boxes and enclosures. Create parametric tabs, slots, and living hinges on your 3D models for easy laser cutting and assembly.</description>
+    <version>0.5.0</version>
+    <date>2026-11-20</date>
+
+    <!--[ Ecosystem Requirements ]-->
+    <freecadmin>1.0.0</freecadmin>
+
+    <!--[ Dependencies ]-->
+    <!-- None needed -->
+
+    <!--[ Tags ]-->
+    <!-- None needed -->
+
+    <!--[ Maintainers ]-->
+    <maintainer email="eskibrew@gmail.com">Eskibrew</maintainer>
+
+    <!--[ Authors ]-->
+    <author>Eskibrew</author>
+
+    <!--[ Licenses ]-->
+    <license file="LICENSE-Code">LGPL-2.1-or-later</license>
+    <license file="LICENSE-Assets">CC-BY-SA-4.0</license>
+
+    <!--[ Icon ]-->
+    <icon>freecad/laserboxtools/resources/icons/LBLogo.svg</icon>
+
+    <!--[ Urls ]-->
+    <url type="repository" branch="main">https://github.com/Eskibrew/LaserBoxTools</url>
+    <url type="documentation">https://github.com/Eskibrew/LaserBoxTools/tree/main/freecad/laserboxtools/resources/docs/</url>
+    <url type="bugtracker">https://github.com/Eskibrew/LaserBoxTools/issues/</url>
+    <url type="readme">https://github.com/Eskibrew/LaserBoxTools/refs/heads/main/freecad/laserboxtools/resources/docs/Overview.md</url>
+
+    <!--[ Content ]-->
+    <content>
+        <other/>
+
+        <workbench>
+            <name>Laser Box Tools</name>
+            <classname>LaserBoxToolsWorkbench</classname>
+            <description>A FreeCAD workbench for designing laser-cut boxes and enclosures. Create parametric tabs, slots, and living hinges on your 3D models for easy laser cutting and assembly.</description>
+            <subdirectory>./</subdirectory>
+            <icon>freecad/laserboxtools/resources/icons/LBLogo-wb.svg</icon>
+        </workbench>
+
+    </content>
+
 </package>
