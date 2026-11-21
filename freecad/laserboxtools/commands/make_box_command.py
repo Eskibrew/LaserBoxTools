@@ -64,7 +64,7 @@ class LBMakeBoxCommand:
         # Called when the user triggers the command (clicks the toolbar button,
         # selects the menu item, or runs FreeCADGui.runCommand()).
         # Place the main logic of your command here.
-        App.Console.PrintMessage("LBMakeBox Command activated\n")
+        #App.Console.PrintMessage("LBMakeBox Command activated\n")
 
         from ..features import MakeBox
         # Create a new document if no document is open

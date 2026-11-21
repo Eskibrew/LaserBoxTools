@@ -47,9 +47,9 @@ def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_dep
     #App.Console.PrintMessage("LBCreateTabsFeature: uniq = " + uniq + "\n")
     #name = doc.getUniqueObjectName("Tabs_" + uniq)
     name = doc.getUniqueObjectName("Tabs")
-    App.Console.PrintMessage("LBCreateTabsFeature: name = " + name + "\n")
+    #App.Console.PrintMessage("LBCreateTabsFeature: name = " + name + "\n")
     pd_body = laserhelper.lbPartDesignBodyContaining(link_obj)
-    App.Console.PrintMessage("LBCreateTabsFeature: pd_body = " + str(pd_body) + "\n")
+    #App.Console.PrintMessage("LBCreateTabsFeature: pd_body = " + str(pd_body) + "\n")
 
     if pd_body is not None:
         a = doc.addObject("PartDesign::FeaturePython", name)

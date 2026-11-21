@@ -70,7 +70,7 @@ class LBTabsCommand:
         # Called when the user triggers the command (clicks the toolbar button,
         # selects the menu item, or runs FreeCADGui.runCommand()).
         # Place the main logic of your command here.
-        App.Console.PrintMessage("LBTabs Command activated\n")
+        #App.Console.PrintMessage("LBTabs Command activated\n")
 
         doc = App.ActiveDocument
         view = App.Gui.ActiveDocument.ActiveView

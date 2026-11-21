@@ -180,6 +180,9 @@ def laser_face_names_for_tab_slot_faces(shape, thickness, tol=None):
     """Face names where the shortest edge on the face matches stock thickness (narrow edge / joint faces).
 
     Works for Part.makeBox solids and PartDesign pads (after the body has been recomputed).
+
+    This lists every joint face. Dropping an face because its mating panel is not being built is done
+    afterwards by laser_face_names_whose_mate_is_included, once the real edges have been chosen.
     """
     if tol is None:
         tol = max(0.05, abs(thickness) * 0.02)
@@ -307,6 +310,77 @@ def laser_link_target_and_shape_for_face_pick(part_obj):
     return part_obj, part_obj.Shape
 
 
+def laser_mate_panel_for_face(shape, face):
+    """Name of the box panel this joint face meets, or None if it does not sit on one side.
+
+    The face is classed by which side of the solid's bounding box it lies on: +Z Top, -Z Bottom,
+    -X Left, +X Right, +Y Front, -Y Back. Position is used instead of the face normal so a boolean
+    that flips a face (tabs or slots) still drops the edge that meets the missing panel.
+    """
+    bb = shape.BoundBox
+    c = face.CenterOfMass
+    center = bb.Center
+    best_name = None
+    best_ratio = 0.0
+
+    for length, delta, neg_name, pos_name in (
+        (bb.XLength, c.x - center.x, 'left', 'right'),
+        (bb.YLength, c.y - center.y, 'back', 'front'),
+        (bb.ZLength, c.z - center.z, 'bottom', 'top'),
+    ):
+        half = max(abs(length) * 0.5, 1e-9)
+        ratio = abs(delta) / half
+
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_name = pos_name if delta > 0.0 else neg_name
+
+    # A joint face lies on the boundary (ratio about 1). Anything nearer the middle is not one edge.
+    if best_ratio < 0.5:
+        return None
+
+    return best_name
+
+
+def laser_included_panels(top, bottom, left, right, front, back):
+    """Map each box panel to whether it is being built.
+
+    Capture this before the make-box loops rebind those names to the panel objects.
+    """
+    return {
+        'top': bool(top),
+        'bottom': bool(bottom),
+        'left': bool(left),
+        'right': bool(right),
+        'front': bool(front),
+        'back': bool(back),
+    }
+
+
+def laser_face_names_whose_mate_is_included(shape, face_names, included):
+    """Drop joint faces that meet a panel which is not being built.
+
+    included is a mapping from laser_included_panels, or None to keep every face.
+    A face that does not sit clearly on one side of the solid is kept.
+
+    Call this after the opposing joint faces have been chosen. Filtering the candidate list
+    earlier lets a small slot or tab wall win "largest face on that side" once the real edge
+    has been removed.
+    """
+    if not face_names or included is None:
+        return face_names if face_names else []
+
+    kept = []
+
+    for name in face_names:
+        mate = laser_mate_panel_for_face(shape, shape.getElement(name))
+
+        if mate is None or included.get(mate, True):
+            kept.append(name)
+
+    return kept
+
+
 def laser_add_piece_to_make_box_group(group, piece_obj, feature_added):
     """Put a box panel under Make Box Group.
 
@@ -320,11 +394,13 @@ def laser_add_piece_to_make_box_group(group, piece_obj, feature_added):
         group.addObject(piece_obj)
 
 
-def laser_add_tabs_feature_to_group(group, part_obj, thickness, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_mode, margin1, margin2, face_names=None, kerf=0.0):
+def laser_add_tabs_feature_to_group(group, part_obj, thickness, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_mode, margin1, margin2, face_names=None, kerf=0.0, included=None):
     """Create a parametric Tabs feature (same as command LBTabs).
 
     PartDesign::Body: Tabs go inside the body (flat tree). Part::Feature: Tabs are added to the group
     and the tree view nests the base under Tabs (claimChildren).
+
+    included: optional panel map from laser_included_panels. Faces that meet a panel set to False are left plain.
 
     Returns True if Tabs were created (caller should not also add part_obj to the group when successful).
     """
@@ -333,8 +409,12 @@ def laser_add_tabs_feature_to_group(group, part_obj, thickness, tab_slot_count, 
     if face_names is None:
         face_names = laser_face_names_for_tab_slot_faces(shape, thickness)
 
+    detected = face_names
+    face_names = laser_face_names_whose_mate_is_included(shape, face_names, included)
+
     if not face_names:
-        App.Console.PrintWarning("LaserMakeBox: No tab faces found for '{}'; shortest edge should match material thickness. Skipping tabs.\n".format(part_obj.Label))
+        if not detected:
+            App.Console.PrintWarning("LaserMakeBox: No tab faces found for '{}'; shortest edge should match material thickness. Skipping tabs.\n".format(part_obj.Label))
         return False
 
     doc = part_obj.Document
@@ -355,8 +435,10 @@ def laser_add_tabs_feature_to_group(group, part_obj, thickness, tab_slot_count, 
     return False
 
 
-def laser_add_slots_feature_to_group(group, part_obj, thickness, tab_slot_count, tab_slot_width, gap_width, slot_mode, margin1, margin2, face_names=None, kerf=0.0):
+def laser_add_slots_feature_to_group(group, part_obj, thickness, tab_slot_count, tab_slot_width, gap_width, slot_mode, margin1, margin2, face_names=None, kerf=0.0, included=None):
     """Create a parametric Slots feature (same as command LBSlots) and add it to the group when using Part.
+
+    included: optional panel map from laser_included_panels. Faces that meet a panel set to False are left plain.
 
     Returns True if a Slots object was created and added (caller should not also add part_obj to the group).
     """
@@ -364,8 +446,12 @@ def laser_add_slots_feature_to_group(group, part_obj, thickness, tab_slot_count,
     if face_names is None:
         face_names = laser_face_names_for_tab_slot_faces(shape, thickness)
 
+    detected = face_names
+    face_names = laser_face_names_whose_mate_is_included(shape, face_names, included)
+
     if not face_names:
-        App.Console.PrintWarning("LaserMakeBox: No slot faces found for '{}'; shortest edge should match material thickness. Skipping slots.\n".format(part_obj.Label))
+        if not detected:
+            App.Console.PrintWarning("LaserMakeBox: No slot faces found for '{}'; shortest edge should match material thickness. Skipping slots.\n".format(part_obj.Label))
         return False
 
     doc = part_obj.Document
@@ -386,11 +472,13 @@ def laser_add_slots_feature_to_group(group, part_obj, thickness, tab_slot_count,
     return False
 
 
-def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0):
-    """Front/Back panels: Tabs on top and bottom edges (world ±Z), then Slots on left and right (world ±X).
+def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0, included=None):
+    """Front/Back panels: Tabs on top and bottom face (world ±Z), then Slots on left and right faces (world ±X).
 
-    Slots are applied to the *tabbed* solid (second feature links to the Tabs object) so both appear on one part.
-    For Part workflow, only the final Slots object is added to the group (nested tree). For PartDesign, Tabs
+    A face that meets a panel which is not being built is left plain. Slots still run when both top and
+    bottom tabs are omitted; they are cut on the plain plate. When tabs are present, slots are applied to
+    the tabbed solid (second feature links to the Tabs object) so both appear on one part.
+    For Part workflow, only the final feature is added to the group (nested tree). For PartDesign, Tabs
     and Slots are appended inside the plate Body (flat timeline).
 
     Do not call doc.recompute() between Tabs and Slots: a full-document recompute here can interact with
@@ -399,12 +487,13 @@ def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, t
     """
     doc = plate_obj.Document
     link_obj, shape = laser_link_target_and_shape_for_face_pick(plate_obj)
-    face_tabs = laser_face_names_for_tab_slot_faces_filtered_by_axes(shape, thickness, ('Z',))
+    raw_tabs = laser_face_names_for_tab_slot_faces_filtered_by_axes(shape, thickness, ('Z',))
 
-    if not face_tabs:
+    if not raw_tabs:
         App.Console.PrintWarning("LaserMakeBox: No tab faces (±Z) for '{}'; skipping front/back tab/slot chain.\n".format(plate_obj.Label))
         return False
 
+    face_tabs = laser_face_names_whose_mate_is_included(shape, raw_tabs, included)
     plate_for_name = plate_obj if plate_obj.isDerivedFrom('PartDesign::Body') else None
 
     # Tabs reaching a corner lengthen the ±X faces, so size the slots on the nominal (untabbed) panel height
@@ -415,19 +504,32 @@ def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, t
             shape.BoundBox.ZLength - margin1 - margin2, tab_slot_count, tab_slot_width, gap_width
         )
 
-    tabs_f = LBCreateTabsFeature(
-        doc, link_obj, face_tabs,
-        tab_slot_count, tab_slot_width, thickness, gap_width, tab_slot_mode, tab_taper, margin1, margin2, refine=True, kerf=kerf,
-        plate_for_name=plate_for_name,
-    )
+    tabs_f = None
+    slot_base = link_obj
+    slot_shape = shape
 
-    if tabs_f is None:
-        return False
+    if face_tabs:
+        tabs_f = LBCreateTabsFeature(
+            doc, link_obj, face_tabs,
+            tab_slot_count, tab_slot_width, thickness, gap_width, tab_slot_mode, tab_taper, margin1, margin2, refine=True, kerf=kerf,
+            plate_for_name=plate_for_name,
+        )
 
-    face_slots = laser_face_names_for_front_back_slots_on_tabbed_shape(tabs_f.Shape, thickness)
+        if tabs_f is None:
+            return False
+
+        slot_base = tabs_f
+        slot_shape = tabs_f.Shape
+
+    raw_slots = laser_face_names_for_front_back_slots_on_tabbed_shape(slot_shape, thickness)
+    face_slots = laser_face_names_whose_mate_is_included(slot_shape, raw_slots, included)
 
     if not face_slots:
-        App.Console.PrintWarning("LaserMakeBox: No slot faces (±X) after tabs for '{}' — tabs only.\n".format(plate_obj.Label))
+        if tabs_f is None:
+            return False
+
+        if not raw_slots:
+            App.Console.PrintWarning("LaserMakeBox: No slot faces (±X) after tabs for '{}' — tabs only.\n".format(plate_obj.Label))
 
         if not plate_obj.isDerivedFrom('PartDesign::Body'):
             group.addObject(tabs_f)
@@ -435,69 +537,85 @@ def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, t
         return True
 
     slots_f = LBCreateSlotsFeature(
-        doc, tabs_f, face_slots,
+        doc, slot_base, face_slots,
         slot_count, slot_width, thickness, slot_gap, tab_slot_mode, margin1, margin2, 0.0, refine=True, kerf=kerf
     )
 
     if slots_f is None:
-        if not plate_obj.isDerivedFrom('PartDesign::Body'):
+        if tabs_f is not None and not plate_obj.isDerivedFrom('PartDesign::Body'):
             group.addObject(tabs_f)
-        return True
+        return tabs_f is not None
 
     if not plate_obj.isDerivedFrom('PartDesign::Body'):
         group.addObject(slots_f)
     return True
 
 
-def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0):
-    """Top/Bottom plates: slots on left/right edges (world ±X) with margin1 = margin2 = thickness, then ±Y.
+def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0, included=None):
+    """Top/Bottom plates: slots on left/right edges (world ±X) with margin1 = margin2 = thickness, then on front/back edges (world ±Y).
 
-    The ±X pass runs first: its thickness margins keep it clear of the corners, so the ±Y faces keep their
-    nominal length. (Running ±Y first could notch the corners and shorten the ±X faces, changing the
-    slot layout there.) The second slot feature links to the first (same pattern as front/back tabs then
-    slots). No full document recompute between steps.
+    A face that meets a panel which is not being built is left plain. The ±Y pass still runs when both
+    left and right slots are omitted; it is cut on the plain plate. The ±X pass runs first when it has
+    faces: its thickness margins keep it clear of the corners, so the ±Y faces keep their nominal length.
+    (Running ±Y first could notch the corners and shorten the ±X faces, changing the slot layout there.)
+    The second slot feature links to the first when the first exists. No full document recompute between steps.
     """
     doc = plate_obj.Document
     link_obj, shape = laser_link_target_and_shape_for_face_pick(plate_obj)
-    face_lr = laser_face_names_two_largest_joint_faces_per_axis(shape, thickness, 'X')
+    raw_lr = laser_face_names_two_largest_joint_faces_per_axis(shape, thickness, 'X')
 
-    if not face_lr:
+    if not raw_lr:
         App.Console.PrintWarning(
             "LaserMakeBox: No slot faces (±X / left-right) for '{}'; skipping top/bottom slot chain.\n".format(plate_obj.Label)
         )
         return False
 
+    face_lr = laser_face_names_whose_mate_is_included(shape, raw_lr, included)
     plate_for_name = plate_obj if plate_obj.isDerivedFrom('PartDesign::Body') else None
     mt = float(thickness)
-    slots_first = LBCreateSlotsFeature(
-        doc, link_obj, face_lr,
-        tab_slot_count, tab_slot_width, thickness, gap_width, tab_slot_mode, mt, mt, 0.0, refine=True, kerf=kerf,
-        plate_for_name=plate_for_name,
-    )
+    slots_first = None
+    second_base = link_obj
+    second_shape = shape
 
-    if slots_first is None:
-        return False
+    if face_lr:
+        slots_first = LBCreateSlotsFeature(
+            doc, link_obj, face_lr,
+            tab_slot_count, tab_slot_width, thickness, gap_width, tab_slot_mode, mt, mt, 0.0, refine=True, kerf=kerf,
+            plate_for_name=plate_for_name,
+        )
 
-    face_fb = laser_face_names_two_largest_joint_faces_per_axis(slots_first.Shape, thickness, 'Y')
+        if slots_first is None:
+            return False
+
+        second_base = slots_first
+        second_shape = slots_first.Shape
+
+    raw_fb = laser_face_names_two_largest_joint_faces_per_axis(second_shape, thickness, 'Y')
+    face_fb = laser_face_names_whose_mate_is_included(second_shape, raw_fb, included)
 
     if not face_fb:
-        App.Console.PrintWarning(
-            "LaserMakeBox: No slot faces (±Y / front-back) after first slots for '{}' — first slot pass only.\n".format(plate_obj.Label)
-        )
+        if slots_first is None:
+            return False
+
+        if not raw_fb:
+            App.Console.PrintWarning(
+                "LaserMakeBox: No slot faces (±Y / front-back) after first slots for '{}' — first slot pass only.\n".format(plate_obj.Label)
+            )
+
         if not plate_obj.isDerivedFrom('PartDesign::Body'):
             group.addObject(slots_first)
         return True
 
     slots_second = LBCreateSlotsFeature(
-        doc, slots_first, face_fb,
+        doc, second_base, face_fb,
         tab_slot_count, tab_slot_width, thickness, gap_width, tab_slot_mode, margin1, margin2, 0.0, refine=True, kerf=kerf,
         plate_for_name=plate_for_name,
     )
 
     if slots_second is None:
-        if not plate_obj.isDerivedFrom('PartDesign::Body'):
+        if slots_first is not None and not plate_obj.isDerivedFrom('PartDesign::Body'):
             group.addObject(slots_first)
-        return True
+        return slots_first is not None
 
     if not plate_obj.isDerivedFrom('PartDesign::Body'):
         group.addObject(slots_second)
@@ -507,6 +625,8 @@ def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_sl
 def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, left, right, front, back, use_tabs_and_slots, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0):
     """Create box using Part workbench (Part::Feature objects, no sketches)."""
     group = App.ActiveDocument.addObject("App::DocumentObjectGroup", "Make Box Group")
+    # Record a dict of which panels are being built (True/False) so we can skip slots/tabs for panels that are not being built
+    included = laser_included_panels(top, bottom, left, right, front, back)
 
     # Bottom: length x width, at z = -height/2
     if bottom:
@@ -519,7 +639,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_top_bottom_dual_slots_to_group(
                 group, bottom, thickness,
-                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, bottom, feature_added)
 
@@ -534,7 +654,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_top_bottom_dual_slots_to_group(
                 group, top, thickness,
-                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, top, feature_added)
 
@@ -550,7 +670,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_tabs_feature_to_group(
                 group, left, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, left, feature_added)
 
@@ -565,7 +685,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_tabs_feature_to_group(
                 group, right, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, right, feature_added)
 
@@ -580,7 +700,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_front_back_tabs_then_slots_to_group(
                 group, front, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, front, feature_added)
 
@@ -595,7 +715,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_front_back_tabs_then_slots_to_group(
                 group, back, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, back, feature_added)
 
@@ -606,6 +726,8 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
 def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, right, front, back, use_tabs_and_slots, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0):
     """Create box using PartDesign workbench (bodies, sketches, pads)."""
     group = App.ActiveDocument.addObject("App::DocumentObjectGroup", "Make Box Group")
+    # Record a dict of which panels are being built (True/False) so we can skip slots/tabs for panels that are not being built
+    included = laser_included_panels(top, bottom, left, right, front, back)
 
     if bottom:
         bottom = laser_make_box_piece(length, width, thickness, -height / 2, 'XY_Plane', 'BodyBottom')
@@ -613,7 +735,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_top_bottom_dual_slots_to_group(
                 group, bottom, thickness,
-                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, bottom, feature_added)
 
@@ -623,7 +745,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_top_bottom_dual_slots_to_group(
                 group, top, thickness,
-                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, top, feature_added)
 
@@ -633,7 +755,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_tabs_feature_to_group(
                 group, left, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, left, feature_added)
 
@@ -643,7 +765,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_tabs_feature_to_group(
                 group, right, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, right, feature_added)
 
@@ -653,7 +775,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_front_back_tabs_then_slots_to_group(
                 group, front, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, front, feature_added)
 
@@ -663,7 +785,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_front_back_tabs_then_slots_to_group(
                 group, back, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
             )
         laser_add_piece_to_make_box_group(group, back, feature_added)
 

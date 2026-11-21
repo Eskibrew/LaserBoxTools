@@ -44,24 +44,20 @@ class MakeBox:
         obj.addProperty("App::PropertyLength", "Kerf", "TabsAndSlots", "Laser kerf (beam width): tabs widened and slots narrowed by kerf/2 per side").Kerf = 0.0
         obj.ViewObject.Visibility = False
 
-    def onChanged(self, obj: App.DocumentObject, prop: str) -> None:
-        """Do something when a property has changed"""
-        App.Console.PrintMessage("Change property: " + str(prop) + "\n")
-
-        # Eager recompute on change (optional)
-        ##if prop in ("Length", "Width", "Height"):
-        ##    self.execute(obj)
+    # def onChanged(self, obj: App.DocumentObject, prop: str) -> None:
+    #   """Do something when a property has changed"""
+    #   App.Console.PrintMessage("Change property: " + str(prop) + "\n")
 
     def execute(self, obj: App.DocumentObject) -> None:
         """Do something when doing a recomputation, this method is mandatory"""
         ##import Part
-        App.Console.PrintMessage("Recompute Python Box feature\n")
+        #App.Console.PrintMessage("Recompute Python Box feature\n")
         ##obj.Shape = Part.makeBox(obj.Length, obj.Width, obj.Height)
 
     @classmethod
     def create(cls, name: str | None = None, doc: App.Document | None = None) -> MakeBox:
         """Optional utility method to create instances of this feature"""
-        App.Console.PrintMessage("Create TheBox Feature Object\n")
+        #App.Console.PrintMessage("Create TheBox Feature Object\n")
 
         # Check valid document
         if not (doc := doc or App.ActiveDocument):

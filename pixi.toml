@@ -4,7 +4,7 @@ channels = ["freecad/label/dev", "conda-forge"]
 description = "A FreeCAD workbench for designing laser-cut boxes and enclosures. Create parametric tabs, slots, and living hinges on your 3D models for easy laser cutting and assembly."
 name = "freecad.laserboxtools"
 platforms = ["osx-arm64", "linux-aarch64", "linux-64", "win-64", "osx-64"]
-version = "0.5.0"
+version = "0.6.0"
 
 [pypi-dependencies]
 freecad-laserboxtools = { path = ".", editable = true }
