@@ -39,6 +39,7 @@ class LBGenerateSlots:
         # Restored objects already have their properties. Calling this constructor
         # from the old src.lasertabs proxy only rebinds the proxy.
         if hasattr(obj, "baseObject"):
+            laserhelper.lbApplyAutofillCountMode(obj, "SlotCount", 1, False)
             return
 
         if not hasattr(obj, 'baseObject'):
@@ -79,10 +80,26 @@ class LBGenerateSlots:
             obj.addProperty("App::PropertyLength","OffsetFromFace","Parameters", "Slot Offset from face").OffsetFromFace = 0.0
         if not hasattr(obj, 'Kerf'):
             obj.addProperty("App::PropertyLength","Kerf","Parameters", "Laser kerf (full beam width). Slots are narrowed by kerf/2 on each side to compensate.").Kerf = 0.0
+        if not hasattr(obj, 'Autofill'):
+            obj.addProperty("App::PropertyBool","Autofill","Parameters", "Autofill").Autofill = True
+        else:
+            if obj.Autofill and obj.SlotCount == 0:
+                obj.SlotCount = 0
+        laserhelper.lbApplyAutofillCountMode(obj, "SlotCount", 1, False)
 
-    # def onChanged(self, obj: App.DocumentObject, prop: str) -> None:
-    #     """Do something when a property has changed"""
-    #     App.Console.PrintMessage("Change property: " + str(prop) + "\n")
+    def onDocumentRestored(self, obj: App.DocumentObject) -> None:
+        """Re-apply the Data-pane lock after the saved properties are loaded."""
+        laserhelper.lbApplyAutofillCountMode(obj, "SlotCount", 1, False)
+
+    def onChanged(self, obj: App.DocumentObject, prop: str) -> None:
+        """Gray Slot Count while Autofill is checked, and keep that count at 0.
+
+        The task panel prepares its spin box before assigning Autofill. This
+        still covers edits made from the property view.
+        """
+        if prop != "Autofill" or laserhelper.lbObjectIsRestoring(obj):
+            return
+        laserhelper.lbApplyAutofillCountMode(obj, "SlotCount", 1, True)
 
     def execute(self, obj: App.DocumentObject) -> None:
         '''"Print a short message when doing a recomputation, this method is mandatory" '''

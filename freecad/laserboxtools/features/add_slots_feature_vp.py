@@ -33,7 +33,7 @@ from ..src import laser_helper as laserhelper
 from ..gui.add_slots_task_panels import LBSlotsTaskPanel
 
 _LB_SLOTS_AUTOUPDATE_PROPS = (
-    "SlotDepth", "SlotLength", "GapWidth", "SlotCount", "Refine", "SlotMode",
+    "Autofill", "SlotDepth", "SlotLength", "GapWidth", "SlotCount", "Refine", "SlotMode",
     "Margin1", "Margin2", "OffsetFromFace", "baseObject", "SwapEnds",
     "SlotHookLength", "SwapHookDirection", "Kerf",
 )
@@ -97,7 +97,6 @@ class LBSlotsViewProviderTree:
             return False #we only handle the detault mode
 
         laserhelper.lbActivateWorkbench()
-        #laserhelper.laser_ensure_new_slot_properties_exist(vobj.Object)
         taskd = LBSlotsTaskPanel(True)
         taskd.obj = vobj.Object
         self.Object.AutoUpdate = False

@@ -26,6 +26,7 @@ import FreeCAD as App
 #import os, Part, Sketcher
 
 from ..gui.make_box_task_panels import LaserMakeBoxTaskPanel
+from ..src import laser_helper as laserhelper
 
 
 class MakeBox:
@@ -38,15 +39,27 @@ class MakeBox:
         obj.addProperty("App::PropertyLength", "BoxHeight", "Dimensions").BoxHeight = 50.0
         obj.addProperty("App::PropertyLength", "BoxThickness", "Dimensions").BoxThickness = 3.0
         obj.addProperty("App::PropertyInteger", "TabSlotCount", "TabsAndSlots").TabSlotCount = 0
+        obj.addProperty("App::PropertyBool", "Autofill", "TabsAndSlots", "Fill each edge with as many tabs and slots as will fit").Autofill = True
         obj.addProperty("App::PropertyLength", "TabSlotWidth", "TabsAndSlots").TabSlotWidth = 10.0
         obj.addProperty("App::PropertyLength", "GapWidth", "TabsAndSlots").GapWidth = 10.0
         obj.addProperty("App::PropertyLength", "TabTaper", "TabsAndSlots").TabTaper = 0.0
         obj.addProperty("App::PropertyLength", "Kerf", "TabsAndSlots", "Laser kerf (beam width): tabs widened and slots narrowed by kerf/2 per side").Kerf = 0.0
+        laserhelper.lbApplyAutofillCountMode(obj, "TabSlotCount", 1, False)
         obj.ViewObject.Visibility = False
 
-    # def onChanged(self, obj: App.DocumentObject, prop: str) -> None:
-    #   """Do something when a property has changed"""
-    #   App.Console.PrintMessage("Change property: " + str(prop) + "\n")
+    def onDocumentRestored(self, obj: App.DocumentObject) -> None:
+        """Re-apply the Data-pane lock after the saved properties are loaded."""
+        laserhelper.lbApplyAutofillCountMode(obj, "TabSlotCount", 1, False)
+
+    def onChanged(self, obj: App.DocumentObject, prop: str) -> None:
+        """Gray Tab/Slot Count while Autofill is checked, and keep that count at 0.
+
+        The task panel prepares its spin box before assigning Autofill. This
+        still covers edits made from the property view.
+        """
+        if prop != "Autofill" or laserhelper.lbObjectIsRestoring(obj):
+            return
+        laserhelper.lbApplyAutofillCountMode(obj, "TabSlotCount", 1, True)
 
     def execute(self, obj: App.DocumentObject) -> None:
         """Do something when doing a recomputation, this method is mandatory"""

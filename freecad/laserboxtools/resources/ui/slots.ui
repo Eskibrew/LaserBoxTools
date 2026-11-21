@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>315</width>
-    <height>630</height>
+    <height>685</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -203,6 +203,16 @@
         </property>
        </widget>
       </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="Autofill">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, the face will be filled with as many slots as are possible based on the other parameters&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Autofill Slots</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -289,6 +299,7 @@
   </customwidget>
  </customwidgets>
  <tabstops>
+  <tabstop>Autofill</tabstop>
   <tabstop>SlotCount</tabstop>
   <tabstop>SlotLength</tabstop>
   <tabstop>SlotDepth</tabstop>
@@ -298,6 +309,9 @@
   <tabstop>Margin1</tabstop>
   <tabstop>Margin2</tabstop>
   <tabstop>OffsetFromFace</tabstop>
+  <tabstop>Kerf</tabstop>
+  <tabstop>SlotHookLength</tabstop>
+  <tabstop>SwapHookDirection</tabstop>
   <tabstop>pbEditSlotFaces</tabstop>
   <tabstop>pbUpdateSlotFaces</tabstop>
   <tabstop>treeWidgetSlotFaces</tabstop>

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>295</width>
+    <width>331</width>
     <height>851</height>
    </rect>
   </property>
@@ -222,7 +222,10 @@
       <string>Tabs and Slots</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="4" column="0">
+      <item row="3" column="1">
+       <widget class="Gui::QuantitySpinBox" name="TabSlotWidth"/>
+      </item>
+      <item row="5" column="0">
        <widget class="QLabel" name="label_17">
         <property name="text">
          <string>Gap Width</string>
@@ -232,13 +235,40 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="4" column="1">
+       <widget class="Gui::QuantitySpinBox" name="TabTaper"/>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="labelKerf">
+        <property name="text">
+         <string>Kerf</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
        <widget class="QLabel" name="label_16">
         <property name="text">
          <string>Tab/Slot Width</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="Gui::QuantitySpinBox" name="Kerf">
+        <property name="toolTip">
+         <string>Laser kerf (beam width). Tabs are widened and slots narrowed by kerf/2 on each side.</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="cbUseTabsAndSlots">
+        <property name="text">
+         <string/>
         </property>
        </widget>
       </item>
@@ -252,43 +282,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_23">
-        <property name="text">
-         <string>Number of tabs/slots</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="Gui::QuantitySpinBox" name="TabSlotWidth"/>
-      </item>
-      <item row="4" column="1">
-       <widget class="Gui::QuantitySpinBox" name="GapWidth"/>
-      </item>
-      <item row="1" column="1">
-       <widget class="Gui::IntSpinBox" name="TabSlotCount">
-        <property name="minimum">
-         <number>0</number>
-        </property>
-        <property name="maximum">
-         <number>9999</number>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QCheckBox" name="cbUseTabsAndSlots">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="Gui::QuantitySpinBox" name="TabTaper"/>
-      </item>
-      <item row="3" column="0">
+      <item row="4" column="0">
        <widget class="QLabel" name="label_19">
         <property name="text">
          <string>Tab Taper</string>
@@ -298,10 +292,20 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="0">
-       <widget class="QLabel" name="labelKerf">
+      <item row="2" column="1">
+       <widget class="Gui::IntSpinBox" name="TabSlotCount">
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>9999</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_23">
         <property name="text">
-         <string>Kerf</string>
+         <string>Number of tabs/slots</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -309,9 +313,12 @@
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="Gui::QuantitySpinBox" name="Kerf">
-        <property name="toolTip">
-         <string>Laser kerf (beam width). Tabs are widened and slots narrowed by kerf/2 on each side.</string>
+       <widget class="Gui::QuantitySpinBox" name="GapWidth"/>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="Autofill">
+        <property name="text">
+         <string>Autofill Tabs/Slots</string>
         </property>
        </widget>
       </item>
@@ -320,14 +327,6 @@
    </item>
   </layout>
  </widget>
- <tabstops>
-  <tabstop>BoxLength</tabstop>
-  <tabstop>BoxWidth</tabstop>
-  <tabstop>BoxHeight</tabstop>
-  <tabstop>BoxThickness</tabstop>
- </tabstops>
- <resources/>
- <connections/>
  <customwidgets>
   <customwidget>
    <class>Gui::QuantitySpinBox</class>
@@ -340,4 +339,12 @@
    <header>Gui/SpinBox.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>BoxLength</tabstop>
+  <tabstop>BoxWidth</tabstop>
+  <tabstop>BoxHeight</tabstop>
+  <tabstop>BoxThickness</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
 </ui>

@@ -27,7 +27,7 @@ from ..features.add_slots_feature_object import LBGenerateSlots
 from ..features.add_slots_feature_vp import LBSlotsViewProviderFlat, LBSlotsViewProviderTree
 
 
-def LBCreateSlotsFeature(doc, link_obj, face_names, slot_count, slot_width, slot_depth, gap_width, slot_mode, margin1, margin2, offset_from_face, refine=True, plate_for_name=None, kerf=0.0):
+def LBCreateSlotsFeature(doc, link_obj, face_names, slot_count, slot_width, slot_depth, gap_width, slot_mode, margin1, margin2, offset_from_face, refine=True, plate_for_name=None, kerf=0.0, autofill=False):
     """Create a parametric Slots feature linked to link_obj (no GUI selection).
 
     link_obj: object for baseObject (PartDesign: Body.Tip — not the Body). plate_for_name: optional
@@ -57,7 +57,14 @@ def LBCreateSlotsFeature(doc, link_obj, face_names, slot_count, slot_width, slot
     else:
         LBSlotsViewProviderTree(a.ViewObject)
 
+    # Autofill is assigned first. Turning it on sets SlotCount to 0 and grays it
+    # in the Data pane; turning it off sets SlotCount to 1. The requested count
+    # is applied after that, so unlock the property before writing it.
+    a.Autofill = bool(autofill)
+    a.setEditorMode("SlotCount", 0)
     a.SlotCount = slot_count
+    if a.Autofill:
+        a.setEditorMode("SlotCount", 1)
     a.SlotLength = float(slot_width)
     a.SlotDepth = float(slot_depth)
     a.GapWidth = float(gap_width)

@@ -33,7 +33,7 @@ from ..src import laser_helper as laserhelper
 from ..gui.add_tabs_task_panels import LBTabsTaskPanel
 
 _LB_TABS_AUTOUPDATE_PROPS = (
-    "TabDepth", "TabWidth", "GapWidth", "TabCount", "TabTaper", "Refine",
+    "Autofill", "TabDepth", "TabWidth", "GapWidth", "TabCount", "TabTaper", "Refine",
     "TabMode", "Margin1", "Margin2", "baseObject", "SwapEnds",
     "TabHookDepth", "TabHookLength", "TabHookRadius", "SwapHookDirection",
     "Kerf",
@@ -98,7 +98,6 @@ class LBTabsViewProviderTree:
             return False #we only handle the detault mode
 
         laserhelper.lbActivateWorkbench()
-        #laserhelper.laser_ensure_new_tab_properties_exist(vobj.Object)
         taskd = LBTabsTaskPanel(True)
         taskd.obj = vobj.Object
         self.Object.AutoUpdate = False
@@ -160,7 +159,7 @@ class LBTabsViewProviderFlat:
             return False #we only handle the detault mode
 
         laserhelper.lbActivateWorkbench()
-        #laserhelper.laser_ensure_new_tab_properties_exist(vobj.Object)
+        #laserhelper.laser_ensure_any_new_tab_properties_exist(vobj.Object)
         taskd = LBTabsTaskPanel(True)
         taskd.obj = vobj.Object
         self.Object.AutoUpdate = False

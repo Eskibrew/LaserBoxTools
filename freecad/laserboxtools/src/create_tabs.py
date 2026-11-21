@@ -29,7 +29,7 @@ from ..features.add_tabs_feature_object import LBGenerateTabs
 from ..features.add_tabs_feature_vp import LBTabsViewProviderFlat, LBTabsViewProviderTree
 
 
-def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_depth, gap_width, tab_mode, tab_taper, margin1, margin2, refine=True, plate_for_name=None, kerf=0.0):
+def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_depth, gap_width, tab_mode, tab_taper, margin1, margin2, refine=True, plate_for_name=None, kerf=0.0, autofill=False):
     """Create a parametric Tabs feature linked to link_obj (no GUI selection).
 
     link_obj: object for baseObject / FaceN refs (PartDesign: Body.Tip, e.g. Pad — not the Body).
@@ -47,7 +47,7 @@ def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_dep
     #App.Console.PrintMessage("LBCreateTabsFeature: uniq = " + uniq + "\n")
     #name = doc.getUniqueObjectName("Tabs_" + uniq)
     name = doc.getUniqueObjectName("Tabs")
-    #App.Console.PrintMessage("LBCreateTabsFeature: name = " + name + "\n")
+    App.Console.PrintMessage("LBCreateTabsFeature: name = " + name + "\n")
     pd_body = laserhelper.lbPartDesignBodyContaining(link_obj)
     #App.Console.PrintMessage("LBCreateTabsFeature: pd_body = " + str(pd_body) + "\n")
 
@@ -63,7 +63,14 @@ def LBCreateTabsFeature(doc, link_obj, face_names, tab_count, tab_width, tab_dep
     else:
         LBTabsViewProviderTree(a.ViewObject)
 
+    # Autofill is assigned first. Turning it on sets TabCount to 0 and grays it
+    # in the Data pane; turning it off sets TabCount to 1. The requested count
+    # is applied after that, so unlock the property before writing it.
+    a.Autofill = bool(autofill)
+    a.setEditorMode("TabCount", 0)
     a.TabCount = tab_count
+    if a.Autofill:
+        a.setEditorMode("TabCount", 1)
     a.TabWidth = float(tab_width)
     a.TabDepth = float(tab_depth)
     a.GapWidth = float(gap_width)

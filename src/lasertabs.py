@@ -86,6 +86,13 @@ class LBGenerateTabs:
         if not hasattr(obj, 'Kerf'):
             obj.addProperty("App::PropertyLength","Kerf","Parameters", "Laser kerf (full beam width). Tabs are widened by kerf/2 on each side to compensate.").Kerf = 0.0
 
+        if not hasattr(obj, 'Autofill'):
+            # A count of 0 was the autofill signal before this property existed.
+            obj.addProperty("App::PropertyBool","Autofill","Parameters", "Autofill").Autofill = (obj.TabCount == 0)
+        else:
+            if obj.Autofill and obj.TabCount == 0:
+                obj.TabCount = 0
+
         # We don't need to remove any properties
 
         # src.lasertabs is a top-level module, so a relative import cannot see freecad/.

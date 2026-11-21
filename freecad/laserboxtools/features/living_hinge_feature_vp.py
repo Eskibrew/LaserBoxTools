@@ -33,7 +33,7 @@ from ..src import laser_helper as laserhelper
 from ..gui.living_hinge_task_panels import LBLivingHingeTaskPanel
 
 _LB_HINGE_AUTOUPDATE_PROPS = (
-    "ElementDepth", "ElementWidth", "ElementCount", "ElementSpacing", "Refine",
+    "Autofill", "ElementDepth", "ElementWidth", "ElementCount", "ElementSpacing", "Refine",
     "ElementMode", "ElementType", "Margin1", "Margin2", "baseObject", "SwapEnds",
 )
 

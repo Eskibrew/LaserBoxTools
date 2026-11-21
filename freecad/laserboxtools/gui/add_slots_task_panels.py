@@ -47,18 +47,47 @@ class LBSlotsTaskPanel:
         self.form.SlotMode.setCurrentIndex(0)
         self.form.SwapEnds.setChecked(False)
         self.form.SwapHookDirection.setChecked(False)
+        self.form.Autofill.stateChanged.connect(self.onAutofillChanged)
         self.form.SlotCount.valueChanged.connect(self.onSlotCountChanged)
         self.form.SlotMode.currentTextChanged.connect(self.onSlotModeChanged)
         self.form.SwapEnds.stateChanged.connect(self.onSwapEndsChanged)
         self.form.SwapHookDirection.stateChanged.connect(self.onSwapHookDirectionChanged)
         self.form.OffsetFromFace.valueChanged.connect(self.onOffsetFromFaceChanged)
+        self._applyAutofillSlotCount(self.form.Autofill.isChecked(), write_count=False)
         self.update()
         self.updateSlotDepthLabel()
+
+    def _applyAutofillSlotCount(self, autofill, write_count):
+        """Put the SlotCount spin box into the state Autofill requires.
+
+        Enabled state and minimum are updated before the value. The spin box
+        clamps anything outside its range, and the expression binding writes
+        that clamped value back onto the object. Signals stay blocked for the
+        whole update so that write-back, and the even-count adjustment, cannot
+        run against the old minimum.
+        """
+        spin = self.form.SlotCount
+        count = 0 if autofill else 1
+        spin.blockSignals(True)
+        try:
+            spin.setEnabled(not autofill)
+            spin.setProperty("minimum", count)
+            if write_count and self.obj:
+                # Autofill leaves SlotCount read-only in the Data pane.
+                self.obj.setEditorMode("SlotCount", 0)
+            if write_count:
+                spin.setProperty("value", count)
+                if self.obj:
+                    self.obj.SlotCount = count
+        finally:
+            spin.blockSignals(False)
 
     def bindExpressions(self):
         if self._expressionBound or not self.obj:
             return
         obj = self.obj
+        # Minimum must already allow the stored count before the binder copies it in.
+        self._applyAutofillSlotCount(bool(obj.Autofill), write_count=False)
         laserhelper.lbBindIntSpinBox(self.form.SlotCount, obj, "SlotCount")
         laserhelper.lbBindQuantitySpinBox(self.form.SlotLength, obj, "SlotLength")
         laserhelper.lbBindQuantitySpinBox(self.form.SlotDepth, obj, "SlotDepth")
@@ -71,7 +100,18 @@ class LBSlotsTaskPanel:
         self.form.SlotMode.setCurrentText(obj.SlotMode)
         self.form.SwapEnds.setChecked(obj.SwapEnds)
         self.form.SwapHookDirection.setChecked(obj.SwapHookDirection)
+        blocked = self.form.Autofill.blockSignals(True)
+        self.form.Autofill.setChecked(bool(obj.Autofill))
+        self.form.Autofill.blockSignals(blocked)
         self._expressionBound = True
+
+    def onAutofillChanged(self, val):
+        if not self.obj:
+            return
+        # stateChanged passes Qt.Checked (2) or Qt.Unchecked (0).
+        autofill = bool(val)
+        self._applyAutofillSlotCount(autofill, write_count=True)
+        self.obj.Autofill = autofill
 
     def onSlotCountChanged(self, val):
         if self.obj and self.obj.SlotMode == "From Both Ends":
@@ -124,6 +164,13 @@ class LBSlotsTaskPanel:
                 item.setText(0, f[0].Name)
                 item.setIcon(0, QtGui.QIcon(":/icons/Tree_Part.svg"))
                 item.setText(1, f[1][0])
+
+            if self.obj.Autofill:
+                self._applyAutofillSlotCount(True, write_count=False)
+            elif self.obj.SlotCount == 0:
+                self._applyAutofillSlotCount(False, write_count=True)
+            else:
+                self._applyAutofillSlotCount(False, write_count=False)
 
     def editSlotFaces(self):
         print(f"edit slot faces")  

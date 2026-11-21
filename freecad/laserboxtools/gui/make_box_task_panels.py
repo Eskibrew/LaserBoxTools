@@ -49,10 +49,45 @@ class LaserMakeBoxTaskPanel:
         self.form.cbFront.setChecked(True)
         self.form.cbBack.setChecked(True)
         self.form.cbUseTabsAndSlots.setChecked(False)
+        self.form.Autofill.stateChanged.connect(self.onAutofillChanged)
         self.bindExpressions()
+
+    def _applyAutofillTabSlotCount(self, autofill, write_count):
+        """Put the TabSlotCount spin box into the state Autofill requires.
+
+        Enabled state and minimum are updated before the value. The spin box
+        clamps anything outside its range, and the expression binding writes
+        that clamped value back onto the object. Signals stay blocked for the
+        whole update so that write-back cannot run against the old minimum.
+        """
+        spin = self.form.TabSlotCount
+        count = 0 if autofill else 1
+        spin.blockSignals(True)
+        try:
+            spin.setEnabled(not autofill)
+            spin.setProperty("minimum", count)
+            if write_count and self.params_obj:
+                # Autofill leaves TabSlotCount read-only in the Data pane.
+                self.params_obj.setEditorMode("TabSlotCount", 0)
+            if write_count:
+                spin.setProperty("value", count)
+                if self.params_obj:
+                    self.params_obj.TabSlotCount = count
+        finally:
+            spin.blockSignals(False)
+
+    def onAutofillChanged(self, val):
+        if not self.params_obj:
+            return
+        # stateChanged passes Qt.Checked (2) or Qt.Unchecked (0).
+        autofill = bool(val)
+        self._applyAutofillTabSlotCount(autofill, write_count=True)
+        self.params_obj.Autofill = autofill
 
     def bindExpressions(self):
         obj = self.params_obj
+        # Minimum must already allow the stored count before the binder copies it in.
+        self._applyAutofillTabSlotCount(bool(obj.Autofill), write_count=False)
         laserhelper.lbBindQuantitySpinBox(self.form.BoxLength, obj, "BoxLength")
         laserhelper.lbBindQuantitySpinBox(self.form.BoxWidth, obj, "BoxWidth")
         laserhelper.lbBindQuantitySpinBox(self.form.BoxHeight, obj, "BoxHeight")
@@ -62,6 +97,9 @@ class LaserMakeBoxTaskPanel:
         laserhelper.lbBindQuantitySpinBox(self.form.GapWidth, obj, "GapWidth")
         laserhelper.lbBindQuantitySpinBox(self.form.TabTaper, obj, "TabTaper")
         laserhelper.lbBindQuantitySpinBox(self.form.Kerf, obj, "Kerf")
+        blocked = self.form.Autofill.blockSignals(True)
+        self.form.Autofill.setChecked(bool(obj.Autofill))
+        self.form.Autofill.blockSignals(blocked)
 
     def _removeParamsObject(self):
         doc = App.ActiveDocument
@@ -99,6 +137,7 @@ class LaserMakeBoxTaskPanel:
         tab_taper = self.params_obj.TabTaper.Value
         gap_width = self.params_obj.GapWidth.Value
         kerf = self.params_obj.Kerf.Value
+        autofill = bool(self.params_obj.Autofill)
 
         self._removeParamsObject()
 
@@ -118,7 +157,8 @@ class LaserMakeBoxTaskPanel:
                                                                 "From Middle",
                                                                 0,
                                                                 0,
-                                                                kerf=kerf
+                                                                kerf=kerf,
+                                                                autofill=autofill
                                                                 )
         else:
             laser_make_box_pieces(length, width, height, thickness,
@@ -136,7 +176,8 @@ class LaserMakeBoxTaskPanel:
                                                         "From Middle",
                                                         0,
                                                         0,
-                                                        kerf=kerf
+                                                        kerf=kerf,
+                                                        autofill=autofill
                                                         )
         App.Gui.Control.closeDialog()
         view = App.Gui.ActiveDocument.ActiveView

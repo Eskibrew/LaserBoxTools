@@ -80,6 +80,13 @@ class LBGenerateSlots:
         if not hasattr(obj, 'Kerf'):
             obj.addProperty("App::PropertyLength","Kerf","Parameters", "Laser kerf (full beam width). Slots are narrowed by kerf/2 on each side to compensate.").Kerf = 0.0
 
+        if not hasattr(obj, 'Autofill'):
+            # A count of 0 was the autofill signal before this property existed.
+            obj.addProperty("App::PropertyBool","Autofill","Parameters", "Autofill").Autofill = (obj.SlotCount == 0)
+        else:
+            if obj.Autofill and obj.SlotCount == 0:
+                obj.SlotCount = 0
+                
         # We don't need to remove any properties
 
         # src.laserslots is a top-level module, so a relative import cannot see freecad/.

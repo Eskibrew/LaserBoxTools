@@ -39,6 +39,7 @@ class LBGenerateTabs:
         # Restored objects already have their properties. Calling this constructor
         # from the old src.lasertabs proxy only rebinds the proxy.
         if hasattr(obj, "baseObject"):
+            laserhelper.lbApplyAutofillCountMode(obj, "TabCount", 1, False)
             return
 
         if not hasattr(obj, 'baseObject'):
@@ -83,10 +84,29 @@ class LBGenerateTabs:
             obj.addProperty("App::PropertyBool","SwapHookDirection","Parameters", "Swap Hook Direction").SwapHookDirection = False
         if not hasattr(obj, 'Kerf'):
             obj.addProperty("App::PropertyLength","Kerf","Parameters", "Laser kerf (full beam width). Tabs are widened by kerf/2 on each side to compensate.").Kerf = 0.0
+        if not hasattr(obj, 'Autofill'):
+            #_msg("Adding Autofill property since it doesn't exist\n")
+            obj.addProperty("App::PropertyBool","Autofill","Parameters", "Autofill").Autofill = True
+        else:
+            #_msg("Autofill property already exists\n")
+            if obj.Autofill and obj.TabCount == 0:
+                #_msg("Autofill is checked, setting TabCount to 0\n")
+                obj.TabCount = 0
+        laserhelper.lbApplyAutofillCountMode(obj, "TabCount", 1, False)
 
-    # def onChanged(self, obj: App.DocumentObject, prop: str) -> None:
-    #     """Do something when a property has changed"""
-    #     App.Console.PrintMessage("Change property: " + str(prop) + "\n")
+    def onDocumentRestored(self, obj: App.DocumentObject) -> None:
+        """Re-apply the Data-pane lock after the saved properties are loaded."""
+        laserhelper.lbApplyAutofillCountMode(obj, "TabCount", 1, False)
+
+    def onChanged(self, obj: App.DocumentObject, prop: str) -> None:
+        """Gray Tab Count while Autofill is checked, and keep that count at 0.
+
+        The task panel prepares its spin box before assigning Autofill. This
+        still covers edits made from the property view.
+        """
+        if prop != "Autofill" or laserhelper.lbObjectIsRestoring(obj):
+            return
+        laserhelper.lbApplyAutofillCountMode(obj, "TabCount", 1, True)
 
     def execute(self, obj: App.DocumentObject) -> None:
         '''"Print a short message when doing a recomputation, this method is mandatory" '''

@@ -45,16 +45,49 @@ class LBLivingHingeTaskPanel:
         self.form.ElementMode.setCurrentIndex(0)
         self.form.ElementType.setCurrentIndex(0)
         self.form.SwapEnds.setChecked(False)
+        self.form.Autofill.stateChanged.connect(self.onAutofillChanged)
         self.form.ElementCount.valueChanged.connect(self.onElementCountChanged)
         self.form.ElementMode.currentTextChanged.connect(self.onElementModeChanged)
         self.form.ElementType.currentTextChanged.connect(self.onElementTypeChanged)
         self.form.SwapEnds.stateChanged.connect(self.onSwapEndsChanged)
+        self._applyAutofillElementCount(self.form.Autofill.isChecked(), write_count=False)
         self.update()
+
+    def _applyAutofillElementCount(self, autofill, write_count):
+        """Put the ElementCount spin box into the state Autofill requires.
+
+        Enabled state and minimum are updated before the value. The spin box
+        clamps anything outside its range, and the expression binding writes
+        that clamped value back onto the object. Signals stay blocked for the
+        whole update so that write-back, and the even-count adjustment, cannot
+        run against the old minimum.
+        """
+        spin = self.form.ElementCount
+        # Minimum stays 1 when Autofill is off so a smaller count can still be chosen.
+        # The value itself returns to 4, the count a new hinge is created with.
+        minimum = 0 if autofill else 1
+        count = 0 if autofill else 4
+        spin.blockSignals(True)
+        try:
+            spin.setEnabled(not autofill)
+            spin.setProperty("minimum", minimum)
+            if write_count and self.obj:
+                # Autofill leaves ElementCount read-only in the Data pane.
+                self.obj.setEditorMode("ElementCount", 0)
+            if write_count:
+                spin.setProperty("value", count)
+                if self.obj:
+                    self.obj.ElementCount = count
+        finally:
+            spin.blockSignals(False)
+        self.updateElementModeSwapEndsState()
 
     def bindExpressions(self):
         if self._expressionBound or not self.obj:
             return
         obj = self.obj
+        # Minimum must already allow the stored count before the binder copies it in.
+        self._applyAutofillElementCount(bool(obj.Autofill), write_count=False)
         laserhelper.lbBindIntSpinBox(self.form.ElementCount, obj, "ElementCount")
         laserhelper.lbBindQuantitySpinBox(self.form.ElementWidth, obj, "ElementWidth")
         laserhelper.lbBindQuantitySpinBox(self.form.ElementDepth, obj, "ElementDepth")
@@ -64,8 +97,19 @@ class LBLivingHingeTaskPanel:
         self.form.ElementMode.setCurrentText(obj.ElementMode)
         self.form.ElementType.setCurrentText(obj.ElementType)
         self.form.SwapEnds.setChecked(obj.SwapEnds)
+        blocked = self.form.Autofill.blockSignals(True)
+        self.form.Autofill.setChecked(bool(obj.Autofill))
+        self.form.Autofill.blockSignals(blocked)
         self._expressionBound = True
         self.updateElementModeSwapEndsState()
+
+    def onAutofillChanged(self, val):
+        if not self.obj:
+            return
+        # stateChanged passes Qt.Checked (2) or Qt.Unchecked (0).
+        autofill = bool(val)
+        self._applyAutofillElementCount(autofill, write_count=True)
+        self.obj.Autofill = autofill
 
     def updateElementModeSwapEndsState(self):
         """Disable ElementMode and SwapEnds when ElementCount is 0."""
@@ -118,6 +162,13 @@ class LBLivingHingeTaskPanel:
                 item.setText(0, f[0].Name)
                 item.setIcon(0, QtGui.QIcon(":/icons/Tree_Part.svg"))
                 item.setText(1, f[1][0])
+
+            if self.obj.Autofill:
+                self._applyAutofillElementCount(True, write_count=False)
+            elif self.obj.ElementCount == 0:
+                self._applyAutofillElementCount(False, write_count=True)
+            else:
+                self._applyAutofillElementCount(False, write_count=False)
 
     def editElementFaces(self):
         print(f"edit Element faces")  

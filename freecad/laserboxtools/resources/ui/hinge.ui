@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>320</width>
-    <height>504</height>
+    <height>590</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,73 +20,7 @@
       <string>Living Hinge Details</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="8" column="3">
-       <widget class="Gui::QuantitySpinBox" name="Margin2"/>
-      </item>
-      <item row="1" column="3">
-       <widget class="Gui::QuantitySpinBox" name="ElementWidth">
-        <property name="minimum">
-         <double>0.100000000000000</double>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="3">
-       <widget class="Gui::QuantitySpinBox" name="ElementSpacing"/>
-      </item>
-      <item row="2" column="3">
-       <widget class="Gui::QuantitySpinBox" name="ElementDepth"/>
-      </item>
-      <item row="7" column="3">
-       <widget class="Gui::QuantitySpinBox" name="Margin1"/>
-      </item>
-      <item row="0" column="0" colspan="3">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Number of elements</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0" colspan="3">
-       <widget class="QLabel" name="label_6">
-        <property name="text">
-         <string>Element Spacing</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="3">
-       <widget class="QCheckBox" name="SwapEnds">
-        <property name="text">
-         <string>Swap Ends</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="3">
-       <widget class="Gui::IntSpinBox" name="ElementCount">
-        <property name="minimum">
-         <number>0</number>
-        </property>
-        <property name="maximum">
-         <number>9999</number>
-        </property>
-       </widget>
-      </item>
       <item row="2" column="2">
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>Element Depth</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
        <widget class="QLabel" name="label_2">
         <property name="text">
          <string>Element Width</string>
@@ -96,7 +30,20 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="2">
+      <item row="8" column="2">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>Margin1</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="3">
+       <widget class="Gui::QuantitySpinBox" name="ElementDepth"/>
+      </item>
+      <item row="6" column="2">
        <widget class="QLabel" name="label_5">
         <property name="text">
          <string>Element Mode</string>
@@ -106,7 +53,40 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="3">
+      <item row="9" column="3">
+       <widget class="Gui::QuantitySpinBox" name="Margin2"/>
+      </item>
+      <item row="4" column="3">
+       <widget class="Gui::QuantitySpinBox" name="ElementSpacing"/>
+      </item>
+      <item row="2" column="3">
+       <widget class="Gui::QuantitySpinBox" name="ElementWidth">
+        <property name="minimum">
+         <double>0.100000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item row="9" column="2">
+       <widget class="QLabel" name="label_8">
+        <property name="text">
+         <string>Margin2</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="3">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Number of elements</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="3">
        <widget class="QComboBox" name="ElementMode">
         <item>
          <property name="text">
@@ -125,7 +105,50 @@
         </item>
        </widget>
       </item>
-      <item row="4" column="3">
+      <item row="3" column="2">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Element Depth</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="2">
+       <widget class="QLabel" name="label_9">
+        <property name="text">
+         <string>ElementType</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0" colspan="3">
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>Element Spacing</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="3">
+       <widget class="Gui::QuantitySpinBox" name="Margin1"/>
+      </item>
+      <item row="1" column="3">
+       <widget class="Gui::IntSpinBox" name="ElementCount">
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>9999</number>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="3">
        <widget class="QComboBox" name="ElementType">
         <property name="currentText">
          <string>Straight</string>
@@ -137,33 +160,17 @@
         </item>
        </widget>
       </item>
-      <item row="4" column="2">
-       <widget class="QLabel" name="label_9">
+      <item row="7" column="3">
+       <widget class="QCheckBox" name="SwapEnds">
         <property name="text">
-         <string>ElementType</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <string>Swap Ends</string>
         </property>
        </widget>
       </item>
-      <item row="7" column="2">
-       <widget class="QLabel" name="label_7">
+      <item row="0" column="3">
+       <widget class="QCheckBox" name="Autofill">
         <property name="text">
-         <string>Margin1</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="8" column="2">
-       <widget class="QLabel" name="label_8">
-        <property name="text">
-         <string>Margin2</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <string>Autofill Elements</string>
         </property>
        </widget>
       </item>
@@ -240,6 +247,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Gui::QuantitySpinBox</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>Gui/QuantitySpinBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::IntSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>Gui/SpinBox.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>ElementCount</tabstop>
   <tabstop>ElementWidth</tabstop>
@@ -253,16 +272,4 @@
  </tabstops>
  <resources/>
  <connections/>
- <customwidgets>
-  <customwidget>
-   <class>Gui::QuantitySpinBox</class>
-   <extends>QDoubleSpinBox</extends>
-   <header>Gui/QuantitySpinBox.h</header>
-  </customwidget>
-  <customwidget>
-   <class>Gui::IntSpinBox</class>
-   <extends>QSpinBox</extends>
-   <header>Gui/SpinBox.h</header>
-  </customwidget>
- </customwidgets>
 </ui>

@@ -68,6 +68,49 @@ def lbShouldSkipAutoRecompute(fp):
     return False
 
 
+def lbObjectIsRestoring(obj):
+    """True while FreeCAD is restoring obj from a saved file."""
+    if obj is None:
+        return False
+    try:
+        is_restoring = getattr(obj, "isRestoring", None)
+        if callable(is_restoring) and is_restoring():
+            return True
+    except Exception:
+        pass
+    doc = getattr(obj, "Document", None)
+    try:
+        if doc is not None and getattr(doc, "Restoring", False):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def lbApplyAutofillCountMode(obj, count_prop, manual_default, sync_values):
+    """Gray count_prop in the Data pane while Autofill is checked.
+
+    Autofill on stores 0 and shows the property read-only. Autofill off makes
+    it editable. sync_values is for a live edit that turns Autofill off: a
+    count that is still 0 becomes manual_default. Restore passes False, so an
+    unchecked Autofill keeps whatever count was saved.
+
+    Editor mode is cleared before any assignment. Read-only status grays the
+    property view; clearing it first also covers a FreeCAD build that rejects
+    Python writes to a read-only property.
+    """
+    if obj is None or not hasattr(obj, "Autofill") or not hasattr(obj, count_prop):
+        return
+    autofill = bool(obj.Autofill)
+    obj.setEditorMode(count_prop, 0)
+    if autofill:
+        if getattr(obj, count_prop) != 0:
+            setattr(obj, count_prop, 0)
+        obj.setEditorMode(count_prop, 1)
+    elif sync_values and getattr(obj, count_prop) == 0:
+        setattr(obj, count_prop, manual_default)
+
+
 # Spin-box arrow buttons auto-repeat while Qt still considers the button held.
 # A recompute inside valueChanged blocks the event loop, so the mouse release
 # stays queued and the value keeps stepping. Defer the recompute until the
@@ -1299,13 +1342,17 @@ def lbCreateLivingHinge(elementCount, elementWidth, elementDepth, elementSpacing
             App.Console.PrintWarning("LivingHinge: Could not determine thickness, using 10mm\n")
             thickness = 10.0
 
-        # vector perpendicular to lengthDir (in plane of face) - cross with ref least parallel to avoid singularity
-        if abs(thicknessDir.z) < 0.9:
-            lengthDir = thicknessDir.cross(App.Vector(0, 0, 1)).normalize()
-        else:
-            lengthDir = thicknessDir.cross(App.Vector(1, 0, 0)).normalize()
-
-        widthDir = thicknessDir.cross(App.Vector(0, 1, 0)).normalize()
+        # Space elements along the long edges, and cut inward toward the opposite edge.
+        # A fixed world axis fails when the face normal is parallel to it (XZ panels, normal along Y).
+        widthDir = App.Vector(dir1)
+        lengthDir = thicknessDir.cross(widthDir)
+        if lengthDir.Length < lbEpsilon:
+            App.Console.PrintWarning("LivingHinge: Could not determine hinge direction\n")
+            return finalShape
+        lengthDir.normalize()
+        span = lengthEdge2.CenterOfMass - lengthEdge1.CenterOfMass
+        if lengthDir.dot(span) < 0:
+            lengthDir = -lengthDir
         element_faces = []
 
         if elementDepth == 0.0:

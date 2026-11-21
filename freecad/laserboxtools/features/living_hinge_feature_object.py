@@ -32,6 +32,10 @@ class LBGenerateLivingHinge:
         '''"Generate Living Hinge" '''
 
         obj.Proxy = self
+        
+        # onChanged must not rewrite ElementCount while defaults are applied.
+        # Autofill starts unchecked, and that would otherwise force the count to 1.
+        self._loading = True
 
         # # Restored objects already have their properties. Calling this constructor
         # # from the old src.lasertabs proxy only rebinds the proxy.
@@ -78,10 +82,32 @@ class LBGenerateLivingHinge:
             obj.addProperty("App::PropertyLength","Margin2","Parameters", "Margin2").Margin2 = 0.0
         if not hasattr(obj, 'ElementType'):
             obj.addProperty("App::PropertyEnumeration", "ElementType", "Parameters", "What shape are the hinge elements").ElementType = ["Straight"]
+        if not hasattr(obj, 'Autofill'):
+            # ElementCount is already set. Zero is the historical autofill signal.
+            autofill = hasattr(obj, "ElementCount") and obj.ElementCount == 0
+            obj.addProperty("App::PropertyBool","Autofill","Parameters", "Autofill").Autofill = autofill
+        else:
+            if obj.Autofill:
+                obj.ElementCount = 0
+        self._loading = False
+        laserhelper.lbApplyAutofillCountMode(obj, "ElementCount", 4, False)
 
-    # def onChanged(self, obj: App.DocumentObject, prop: str) -> None:
-    #     """Do something when a property has changed"""
-    #     App.Console.PrintMessage("Change property: " + str(prop) + "\n")
+    def onDocumentRestored(self, obj: App.DocumentObject) -> None:
+        """Re-apply the Data-pane lock after the saved properties are loaded."""
+        laserhelper.lbApplyAutofillCountMode(obj, "ElementCount", 4, False)
+
+    def onChanged(self, obj: App.DocumentObject, prop: str) -> None:
+        """Gray Element Count while Autofill is checked, and keep that count at 0.
+
+        The task panel prepares its spin box before assigning Autofill. This
+        still covers edits made from the property view. _loading skips the
+        default assignments in __init__, where Autofill starts unchecked.
+        """
+        if getattr(self, "_loading", False):
+            return
+        if prop != "Autofill" or laserhelper.lbObjectIsRestoring(obj):
+            return
+        laserhelper.lbApplyAutofillCountMode(obj, "ElementCount", 4, True)
 
     def execute(self, obj: App.DocumentObject) -> None:
         '''"Print a short message when doing a recomputation, this method is mandatory" '''

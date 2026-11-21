@@ -394,7 +394,7 @@ def laser_add_piece_to_make_box_group(group, piece_obj, feature_added):
         group.addObject(piece_obj)
 
 
-def laser_add_tabs_feature_to_group(group, part_obj, thickness, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_mode, margin1, margin2, face_names=None, kerf=0.0, included=None):
+def laser_add_tabs_feature_to_group(group, part_obj, thickness, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_mode, margin1, margin2, face_names=None, kerf=0.0, included=None, autofill=False):
     """Create a parametric Tabs feature (same as command LBTabs).
 
     PartDesign::Body: Tabs go inside the body (flat tree). Part::Feature: Tabs are added to the group
@@ -423,7 +423,7 @@ def laser_add_tabs_feature_to_group(group, part_obj, thickness, tab_slot_count, 
     tabs = LBCreateTabsFeature(
         doc, link_obj, face_names,
         tab_slot_count, tab_slot_width, thickness, gap_width, tab_mode, tab_taper, margin1, margin2, refine=True, kerf=kerf,
-        plate_for_name=plate_for_name,
+        plate_for_name=plate_for_name, autofill=autofill,
     )
 
     if tabs is not None:
@@ -435,7 +435,7 @@ def laser_add_tabs_feature_to_group(group, part_obj, thickness, tab_slot_count, 
     return False
 
 
-def laser_add_slots_feature_to_group(group, part_obj, thickness, tab_slot_count, tab_slot_width, gap_width, slot_mode, margin1, margin2, face_names=None, kerf=0.0, included=None):
+def laser_add_slots_feature_to_group(group, part_obj, thickness, tab_slot_count, tab_slot_width, gap_width, slot_mode, margin1, margin2, face_names=None, kerf=0.0, included=None, autofill=False):
     """Create a parametric Slots feature (same as command LBSlots) and add it to the group when using Part.
 
     included: optional panel map from laser_included_panels. Faces that meet a panel set to False are left plain.
@@ -460,7 +460,7 @@ def laser_add_slots_feature_to_group(group, part_obj, thickness, tab_slot_count,
     slots = LBCreateSlotsFeature(
         doc, link_obj, face_names,
         tab_slot_count, tab_slot_width, thickness, gap_width, slot_mode, margin1, margin2, 0.0, refine=True, kerf=kerf,
-        plate_for_name=plate_for_name,
+        plate_for_name=plate_for_name, autofill=autofill,
     )
 
     if slots is not None:
@@ -472,7 +472,7 @@ def laser_add_slots_feature_to_group(group, part_obj, thickness, tab_slot_count,
     return False
 
 
-def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0, included=None):
+def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0, included=None, autofill=False):
     """Front/Back panels: Tabs on top and bottom face (world ±Z), then Slots on left and right faces (world ±X).
 
     A face that meets a panel which is not being built is left plain. Slots still run when both top and
@@ -512,7 +512,7 @@ def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, t
         tabs_f = LBCreateTabsFeature(
             doc, link_obj, face_tabs,
             tab_slot_count, tab_slot_width, thickness, gap_width, tab_slot_mode, tab_taper, margin1, margin2, refine=True, kerf=kerf,
-            plate_for_name=plate_for_name,
+            plate_for_name=plate_for_name, autofill=autofill,
         )
 
         if tabs_f is None:
@@ -536,9 +536,13 @@ def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, t
 
         return True
 
+    # A resolved count keeps these slots identical to the mating tabs. Leaving
+    # Autofill on would put the count back to 0 and size them from the tabbed edge.
+    slots_autofill = autofill and slot_count == tab_slot_count
     slots_f = LBCreateSlotsFeature(
         doc, slot_base, face_slots,
-        slot_count, slot_width, thickness, slot_gap, tab_slot_mode, margin1, margin2, 0.0, refine=True, kerf=kerf
+        slot_count, slot_width, thickness, slot_gap, tab_slot_mode, margin1, margin2, 0.0, refine=True, kerf=kerf,
+        autofill=slots_autofill,
     )
 
     if slots_f is None:
@@ -551,7 +555,7 @@ def laser_add_front_back_tabs_then_slots_to_group(group, plate_obj, thickness, t
     return True
 
 
-def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0, included=None):
+def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0, included=None, autofill=False):
     """Top/Bottom plates: slots on left/right edges (world ±X) with margin1 = margin2 = thickness, then on front/back edges (world ±Y).
 
     A face that meets a panel which is not being built is left plain. The ±Y pass still runs when both
@@ -581,7 +585,7 @@ def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_sl
         slots_first = LBCreateSlotsFeature(
             doc, link_obj, face_lr,
             tab_slot_count, tab_slot_width, thickness, gap_width, tab_slot_mode, mt, mt, 0.0, refine=True, kerf=kerf,
-            plate_for_name=plate_for_name,
+            plate_for_name=plate_for_name, autofill=autofill,
         )
 
         if slots_first is None:
@@ -609,7 +613,7 @@ def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_sl
     slots_second = LBCreateSlotsFeature(
         doc, second_base, face_fb,
         tab_slot_count, tab_slot_width, thickness, gap_width, tab_slot_mode, margin1, margin2, 0.0, refine=True, kerf=kerf,
-        plate_for_name=plate_for_name,
+        plate_for_name=plate_for_name, autofill=autofill,
     )
 
     if slots_second is None:
@@ -622,7 +626,7 @@ def laser_add_top_bottom_dual_slots_to_group(group, plate_obj, thickness, tab_sl
     return True
 
 
-def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, left, right, front, back, use_tabs_and_slots, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0):
+def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, left, right, front, back, use_tabs_and_slots, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0, autofill=False):
     """Create box using Part workbench (Part::Feature objects, no sketches)."""
     group = App.ActiveDocument.addObject("App::DocumentObjectGroup", "Make Box Group")
     # Record a dict of which panels are being built (True/False) so we can skip slots/tabs for panels that are not being built
@@ -639,7 +643,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_top_bottom_dual_slots_to_group(
                 group, bottom, thickness,
-                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, bottom, feature_added)
 
@@ -654,7 +658,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_top_bottom_dual_slots_to_group(
                 group, top, thickness,
-                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, top, feature_added)
 
@@ -670,7 +674,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_tabs_feature_to_group(
                 group, left, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, left, feature_added)
 
@@ -685,7 +689,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_tabs_feature_to_group(
                 group, right, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, right, feature_added)
 
@@ -700,7 +704,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_front_back_tabs_then_slots_to_group(
                 group, front, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, front, feature_added)
 
@@ -715,7 +719,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
         if use_tabs_and_slots:
             feature_added = laser_add_front_back_tabs_then_slots_to_group(
                 group, back, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, back, feature_added)
 
@@ -723,7 +727,7 @@ def laser_make_box_pieces_simple(length, width, height, thickness, top, bottom, 
     return group
 
 
-def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, right, front, back, use_tabs_and_slots, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0):
+def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, right, front, back, use_tabs_and_slots, tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=0.0, autofill=False):
     """Create box using PartDesign workbench (bodies, sketches, pads)."""
     group = App.ActiveDocument.addObject("App::DocumentObjectGroup", "Make Box Group")
     # Record a dict of which panels are being built (True/False) so we can skip slots/tabs for panels that are not being built
@@ -735,7 +739,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_top_bottom_dual_slots_to_group(
                 group, bottom, thickness,
-                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, bottom, feature_added)
 
@@ -745,7 +749,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_top_bottom_dual_slots_to_group(
                 group, top, thickness,
-                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, top, feature_added)
 
@@ -755,7 +759,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_tabs_feature_to_group(
                 group, left, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, left, feature_added)
 
@@ -765,7 +769,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_tabs_feature_to_group(
                 group, right, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, right, feature_added)
 
@@ -775,7 +779,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_front_back_tabs_then_slots_to_group(
                 group, front, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, front, feature_added)
 
@@ -785,7 +789,7 @@ def laser_make_box_pieces(length, width, height, thickness, top, bottom, left, r
         if use_tabs_and_slots:
             feature_added = laser_add_front_back_tabs_then_slots_to_group(
                 group, back, thickness,
-                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included
+                tab_slot_count, tab_slot_width, tab_taper, gap_width, tab_slot_mode, margin1, margin2, kerf=kerf, included=included, autofill=autofill
             )
         laser_add_piece_to_make_box_group(group, back, feature_added)
 

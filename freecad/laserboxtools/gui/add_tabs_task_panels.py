@@ -28,7 +28,6 @@ from PySide import QtCore, QtGui
 
 from ..src import laser_helper as laserhelper
 
-
 __dir__ = os.path.dirname(__file__)
 path_to_ui = os.path.join(__dir__, '../resources/ui/tabs.ui')
 
@@ -47,16 +46,45 @@ class LBTabsTaskPanel:
         self.form.TabMode.setCurrentIndex(0)
         self.form.SwapEnds.setChecked(False)
         self.form.SwapHookDirection.setChecked(False)
+        self.form.Autofill.stateChanged.connect(self.onAutofillChanged)
         self.form.TabCount.valueChanged.connect(self.onTabCountChanged)
         self.form.TabMode.currentTextChanged.connect(self.onTabModeChanged)
         self.form.SwapEnds.stateChanged.connect(self.onSwapEndsChanged)
         self.form.SwapHookDirection.stateChanged.connect(self.onSwapHookDirectionChanged)
+        self._applyAutofillTabCount(self.form.Autofill.isChecked(), write_count=False)
         self.update()
+
+    def _applyAutofillTabCount(self, autofill, write_count):
+        """Put the TabCount spin box into the state Autofill requires.
+
+        Enabled state and minimum are updated before the value. The spin box
+        clamps anything outside its range, and the expression binding writes
+        that clamped value back onto the object. Signals stay blocked for the
+        whole update so that write-back, and the even-count adjustment, cannot
+        run against the old minimum.
+        """
+        spin = self.form.TabCount
+        count = 0 if autofill else 1
+        spin.blockSignals(True)
+        try:
+            spin.setEnabled(not autofill)
+            spin.setProperty("minimum", count)
+            if write_count and self.obj:
+                # Autofill leaves TabCount read-only in the Data pane.
+                self.obj.setEditorMode("TabCount", 0)
+            if write_count:
+                spin.setProperty("value", count)
+                if self.obj:
+                    self.obj.TabCount = count
+        finally:
+            spin.blockSignals(False)
 
     def bindExpressions(self):
         if self._expressionBound or not self.obj:
             return
         obj = self.obj
+        # Minimum must already allow the stored count before the binder copies it in.
+        self._applyAutofillTabCount(bool(obj.Autofill), write_count=False)
         laserhelper.lbBindIntSpinBox(self.form.TabCount, obj, "TabCount")
         laserhelper.lbBindQuantitySpinBox(self.form.TabWidth, obj, "TabWidth")
         laserhelper.lbBindQuantitySpinBox(self.form.TabDepth, obj, "TabDepth")
@@ -71,7 +99,18 @@ class LBTabsTaskPanel:
         self.form.TabMode.setCurrentText(obj.TabMode)
         self.form.SwapEnds.setChecked(obj.SwapEnds)
         self.form.SwapHookDirection.setChecked(obj.SwapHookDirection)
+        blocked = self.form.Autofill.blockSignals(True)
+        self.form.Autofill.setChecked(bool(obj.Autofill))
+        self.form.Autofill.blockSignals(blocked)
         self._expressionBound = True
+
+    def onAutofillChanged(self, val):
+        if not self.obj:
+            return
+        # stateChanged passes Qt.Checked (2) or Qt.Unchecked (0).
+        autofill = bool(val)
+        self._applyAutofillTabCount(autofill, write_count=True)
+        self.obj.Autofill = autofill
 
     def onTabCountChanged(self, val):
         if self.obj and self.obj.TabMode == "From Both Ends":
@@ -114,6 +153,13 @@ class LBTabsTaskPanel:
                 item.setText(0, f[0].Name)
                 item.setIcon(0, QtGui.QIcon(":/icons/Tree_Part.svg"))
                 item.setText(1, f[1][0])
+            
+            if self.obj.Autofill:
+                self._applyAutofillTabCount(True, write_count=False)
+            elif self.obj.TabCount == 0:
+                self._applyAutofillTabCount(False, write_count=True)
+            else:
+                self._applyAutofillTabCount(False, write_count=False)
 
     def editTabFaces(self):
         print(f"edit tab faces")  
